@@ -1,0 +1,1838 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>問道 · Mondō — Luyện thi N1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Serif+JP:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ============ Design tokens ============ */
+:root{
+  --ink:#20283b;
+  --ink-soft:#5b6478;
+  --paper:#f6f1e6;
+  --paper-dim:#ece4d2;
+  --card:#fffdf8;
+  --line:#ddd2b6;
+  --vermilion:#c1440e;
+  --vermilion-deep:#9c3509;
+  --bamboo:#3f6f52;
+  --bamboo-deep:#2f5640;
+  --gold:#b9852f;
+  --shadow: 0 1px 2px rgba(32,40,59,.06), 0 6px 20px rgba(32,40,59,.07);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --maxw: 460px;
+}
+[data-theme="dark"]{
+  --ink:#efe8d6;
+  --ink-soft:#a9b0c4;
+  --paper:#12151f;
+  --paper-dim:#181c29;
+  --card:#1b2030;
+  --line:#2c3346;
+  --vermilion:#e0713a;
+  --vermilion-deep:#c1440e;
+  --bamboo:#5fa17c;
+  --bamboo-deep:#3f6f52;
+  --gold:#d4a94a;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
+  min-height:100vh;
+  transition:background .25s ease, color .25s ease;
+}
+.jp{ font-family:'Shippori Mincho','Noto Serif JP',serif; }
+button{font-family:inherit;}
+::selection{background:var(--vermilion); color:#fff;}
+
+.app{
+  max-width:var(--maxw);
+  margin:0 auto;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  background:var(--paper);
+}
+
+/* ============ Top bar ============ */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px 10px;
+  position:sticky; top:0; z-index:20;
+  background:linear-gradient(var(--paper) 78%, transparent);
+}
+.topbar .side{ display:flex; align-items:center; gap:6px; min-width:40px; }
+.iconbtn{
+  width:38px; height:38px; border-radius:50%;
+  border:1px solid var(--line); background:var(--card);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:16px; color:var(--ink);
+  transition:transform .15s ease, background .15s ease;
+}
+.iconbtn:active{ transform:scale(.9); }
+.brand{
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+}
+.seal{
+  width:30px; height:30px; border-radius:8px; background:var(--vermilion);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:'Shippori Mincho',serif; font-weight:700; font-size:15px;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.35);
+}
+.brand-name{ font-family:'Shippori Mincho',serif; font-weight:700; font-size:17px; letter-spacing:.02em; }
+.brand-sub{ font-size:10px; color:var(--ink-soft); margin-top:-2px; }
+
+/* ============ Screens ============ */
+.screen{ display:none; padding:4px 18px 100px; flex:1; animation:fadein .25s ease; }
+.screen.active{ display:block; }
+@keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+.section-title{
+  font-size:12px; color:var(--ink-soft); text-transform:none;
+  margin:22px 2px 10px; display:flex; align-items:center; gap:8px;
+}
+.section-title::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+/* Hero on home */
+.hero{
+  margin-top:6px; padding:22px 20px; border-radius:var(--radius);
+  background:linear-gradient(135deg, var(--ink) 0%, #34405c 100%);
+  color:#f4efe0; position:relative; overflow:hidden;
+}
+[data-theme="dark"] .hero{ background:linear-gradient(135deg, #232a3d 0%, #171c29 100%); }
+.hero::before{
+  content:"学"; position:absolute; right:-8px; bottom:-24px; font-family:'Shippori Mincho',serif;
+  font-size:130px; color:rgba(244,239,224,.06); font-weight:700;
+}
+.hero-line1{ font-size:13px; opacity:.75; margin-bottom:6px; }
+.hero-line2{ font-family:'Shippori Mincho',serif; font-size:22px; font-weight:700; line-height:1.4; }
+.hero-stats{ display:flex; gap:18px; margin-top:16px; }
+.hero-stat b{ display:block; font-size:20px; font-weight:800; }
+.hero-stat span{ font-size:11px; opacity:.7; }
+
+/* dataset cards */
+.dataset-grid{ display:flex; flex-direction:column; gap:10px; }
+.dataset-card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px 16px; cursor:pointer; box-shadow:var(--shadow);
+  transition:transform .15s ease, border-color .15s ease;
+  display:flex; flex-direction:column; gap:10px;
+}
+.dataset-card:active{ transform:scale(.98); }
+.dc-top{ display:flex; align-items:center; gap:12px; }
+.dc-emoji{
+  width:42px; height:42px; border-radius:11px; background:var(--paper-dim);
+  display:flex; align-items:center; justify-content:center; font-size:20px; flex:none;
+}
+.dc-name{ font-family:'Shippori Mincho',serif; font-weight:700; font-size:16px; }
+.dc-meta{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+.dc-bar-wrap{ height:6px; border-radius:4px; background:var(--paper-dim); overflow:hidden; }
+.dc-bar{ height:100%; background:linear-gradient(90deg, var(--bamboo-deep), var(--bamboo)); border-radius:4px; transition:width .4s ease; }
+.dc-foot{ display:flex; justify-content:space-between; font-size:11px; color:var(--ink-soft); }
+.add-dataset-card{
+  border:1.5px dashed var(--line); border-radius:var(--radius); padding:16px;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  color:var(--ink-soft); font-size:13px; cursor:pointer; background:transparent;
+}
+
+/* buttons */
+.btn{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:14px 18px; border-radius:var(--radius-sm); border:none;
+  font-size:15px; font-weight:700; cursor:pointer; width:100%;
+  transition:transform .12s ease, opacity .12s ease;
+}
+.btn:active{ transform:scale(.97); }
+.btn-primary{ background:var(--vermilion); color:#fff; box-shadow:0 6px 16px rgba(193,68,14,.28); }
+.btn-ghost{ background:var(--card); color:var(--ink); border:1px solid var(--line); }
+.btn-outline{ background:transparent; color:var(--vermilion); border:1.5px solid var(--vermilion); }
+.btn-sm{ padding:9px 14px; font-size:13px; width:auto; }
+.btn-danger{ background:transparent; color:#c1440e; border:1.5px solid #c1440e33; }
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* mode select */
+.mode-grid{ display:flex; flex-direction:column; gap:10px; }
+.mode-card{
+  display:flex; align-items:center; gap:14px; padding:15px 16px;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  cursor:pointer; box-shadow:var(--shadow); text-align:left;
+}
+.mode-card:active{ transform:scale(.98); }
+.mode-icon{
+  width:44px; height:44px; border-radius:12px; display:flex; align-items:center;
+  justify-content:center; font-size:20px; flex:none;
+}
+.mode-title{ font-weight:800; font-size:14.5px; }
+.mode-desc{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; line-height:1.5; }
+.mode-count{ margin-left:auto; font-size:12px; font-weight:800; color:var(--ink-soft); text-align:right; flex:none; }
+
+/* quiz */
+.quiz-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; font-size:12.5px; color:var(--ink-soft); font-weight:700; }
+.progress-track{ height:8px; background:var(--paper-dim); border-radius:6px; overflow:hidden; margin-bottom:16px; }
+.progress-fill{ height:100%; background:linear-gradient(90deg, var(--vermilion-deep), var(--vermilion)); border-radius:6px; transition:width .3s ease; }
+
+.stat-chip-row{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.chip{
+  font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:20px;
+  background:var(--paper-dim); color:var(--ink-soft); display:flex; align-items:center; gap:5px;
+}
+.chip.combo{ background:#f3e0b8; color:#7a5a13; }
+[data-theme="dark"] .chip.combo{ background:#3a2f14; color:#e8c574; }
+.chip.correct{ background:#dcece1; color:var(--bamboo-deep); }
+[data-theme="dark"] .chip.correct{ background:#173322; color:#8fd3ac; }
+.chip.wrong{ background:#f4ded4; color:var(--vermilion-deep); }
+[data-theme="dark"] .chip.wrong{ background:#3a1e10; color:#f0a07a; }
+
+.q-card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:22px 20px 20px; box-shadow:var(--shadow); margin-bottom:18px; position:relative;
+}
+.q-label{ font-size:11px; color:var(--ink-soft); font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.q-text{ font-family:'Shippori Mincho','Noto Serif JP',serif; font-size:19px; line-height:1.85; font-weight:600; }
+.speak-btn{
+  position:absolute; top:16px; right:16px; width:34px; height:34px; border-radius:50%;
+  border:1px solid var(--line); background:var(--paper-dim); font-size:14px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; color:var(--ink);
+}
+.speak-btn:active{ transform:scale(.9); }
+
+.opt-list{ display:flex; flex-direction:column; gap:10px; }
+.opt{
+  display:flex; align-items:center; gap:12px; text-align:left;
+  padding:15px 16px; border-radius:var(--radius-sm); border:1.5px solid var(--line);
+  background:var(--card); cursor:pointer; font-size:15.5px; font-family:'Shippori Mincho','Noto Serif JP',serif;
+  transition:border-color .15s ease, background .15s ease, transform .1s ease;
+}
+.opt:active{ transform:scale(.985); }
+.opt .letter{
+  width:26px; height:26px; border-radius:50%; background:var(--paper-dim); color:var(--ink-soft);
+  font-family:'Zen Kaku Gothic New',sans-serif; font-size:12px; font-weight:800;
+  display:flex; align-items:center; justify-content:center; flex:none;
+}
+.opt.selected-correct{ border-color:var(--bamboo); background:#e4f1e9; }
+.opt.selected-correct .letter{ background:var(--bamboo); color:#fff; }
+[data-theme="dark"] .opt.selected-correct{ background:#152a1e; }
+.opt.selected-wrong{ border-color:var(--vermilion); background:#f7e2d8; }
+.opt.selected-wrong .letter{ background:var(--vermilion); color:#fff; }
+[data-theme="dark"] .opt.selected-wrong{ background:#2c150c; }
+.opt.reveal-correct{ border-color:var(--bamboo); }
+.opt.reveal-correct .letter{ background:var(--bamboo); color:#fff; }
+.opt.dim{ opacity:.5; }
+.opt.locked{ cursor:default; }
+
+.feedback{
+  margin-top:16px; padding:16px 18px; border-radius:var(--radius); animation:pop .22s ease;
+}
+@keyframes pop{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+.feedback.ok{ background:#e4f1e9; border:1px solid #bcdfc9; }
+.feedback.no{ background:#f7e2d8; border:1px solid #edbfa5; }
+[data-theme="dark"] .feedback.ok{ background:#132a1e; border-color:#1f4230; }
+[data-theme="dark"] .feedback.no{ background:#2c150c; border-color:#472213; }
+.fb-head{ font-weight:800; font-size:14.5px; display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.feedback.ok .fb-head{ color:var(--bamboo-deep); }
+.feedback.no .fb-head{ color:var(--vermilion-deep); }
+.fb-row{ font-size:13px; margin-bottom:6px; line-height:1.6; }
+.fb-row b{ font-family:'Shippori Mincho',serif; }
+.fb-label{ color:var(--ink-soft); font-size:11px; font-weight:700; display:block; margin-bottom:2px; }
+.fb-explain{ font-size:13.5px; line-height:1.75; margin-top:8px; padding-top:10px; border-top:1px dashed var(--line); }
+.fb-priority{ margin-top:10px; font-size:12px; font-weight:800; color:var(--vermilion-deep); display:flex; align-items:center; gap:6px; }
+
+.next-btn-wrap{ margin-top:14px; }
+
+/* dashboard */
+.dash-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px; }
+.dash-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); }
+.dash-card b{ display:block; font-size:22px; font-weight:800; }
+.dash-card span{ font-size:11.5px; color:var(--ink-soft); }
+.dash-wide{ grid-column:1 / -1; }
+.status-bars{ display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+.status-row{ display:flex; align-items:center; gap:10px; font-size:12.5px; }
+.status-dot{ width:9px; height:9px; border-radius:50%; flex:none; }
+.status-row .track{ flex:1; height:7px; background:var(--paper-dim); border-radius:5px; overflow:hidden; }
+.status-row .fill{ height:100%; border-radius:5px; }
+.status-row .num{ width:34px; text-align:right; font-weight:800; color:var(--ink-soft); }
+
+.wrong-list{ display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+.wrong-item{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--paper-dim); border-radius:10px; }
+.wrong-rank{ width:22px; height:22px; border-radius:6px; background:var(--vermilion); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex:none; }
+.wrong-q{ font-family:'Shippori Mincho',serif; font-size:13px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wrong-count{ font-size:11.5px; font-weight:800; color:var(--vermilion-deep); flex:none; }
+
+/* settings */
+.settings-list{ display:flex; flex-direction:column; gap:10px; }
+.settings-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px;
+}
+.settings-row .label{ font-size:14px; font-weight:700; }
+.settings-row .desc{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+.switch{ width:44px; height:26px; border-radius:20px; background:var(--paper-dim); border:1px solid var(--line); position:relative; cursor:pointer; flex:none; }
+.switch::after{ content:""; position:absolute; width:20px; height:20px; border-radius:50%; background:var(--card); top:2px; left:2px; transition:.2s ease; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+.switch.on{ background:var(--bamboo); }
+.switch.on::after{ left:20px; background:#fff; }
+input[type=file]{ display:none; }
+
+/* exam result */
+.result-hero{ text-align:center; padding:26px 10px 10px; }
+.result-score{ font-family:'Shippori Mincho',serif; font-size:52px; font-weight:800; color:var(--vermilion); }
+.result-sub{ color:var(--ink-soft); font-size:13px; margin-top:4px; }
+.review-item{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+.review-q{ font-family:'Shippori Mincho',serif; font-size:14px; margin-bottom:6px; }
+.review-row{ font-size:12px; color:var(--ink-soft); margin-bottom:2px; }
+.review-row.bad{ color:var(--vermilion-deep); font-weight:700; }
+.review-row.good{ color:var(--bamboo-deep); font-weight:700; }
+
+/* nav bottom (in quiz/config screens) */
+.bottom-fixed{
+  position:sticky; bottom:0; padding:14px 18px calc(16px + env(safe-area-inset-bottom));
+  background:linear-gradient(transparent, var(--paper) 30%); z-index:15;
+}
+
+/* config panel (count picker for exam) */
+.count-picker{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 18px; }
+.count-opt{
+  padding:9px 16px; border-radius:20px; border:1.5px solid var(--line); background:var(--card);
+  font-size:13px; font-weight:700; cursor:pointer; color:var(--ink);
+}
+.count-opt.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+/* modal / toast */
+.overlay{
+  position:fixed; inset:0; background:rgba(15,17,25,.5); display:none;
+  align-items:flex-end; justify-content:center; z-index:100;
+}
+.overlay.show{ display:flex; }
+.sheet{
+  background:var(--card); width:100%; max-width:var(--maxw); border-radius:20px 20px 0 0;
+  padding:22px 20px calc(22px + env(safe-area-inset-bottom)); animation:sheetup .25s ease;
+}
+@keyframes sheetup{ from{transform:translateY(30px); opacity:0;} to{transform:none; opacity:1;} }
+.sheet h3{ margin:0 0 8px; font-family:'Shippori Mincho',serif; font-size:17px; }
+.sheet p{ margin:0 0 18px; font-size:13.5px; color:var(--ink-soft); line-height:1.6; }
+.sheet .row{ display:flex; gap:10px; }
+
+.toast{
+  position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--ink); color:var(--paper); padding:11px 18px; border-radius:30px;
+  font-size:13px; font-weight:600; z-index:200; opacity:0; transition:.25s ease; pointer-events:none;
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+.empty-note{ text-align:center; padding:30px 10px; color:var(--ink-soft); font-size:13px; line-height:1.7; }
+
+@media (min-width:520px){
+  .app{ box-shadow:0 0 60px rgba(0,0,0,.06); }
+}
+</style>
+
+<!-- PWA -->
+<meta name="theme-color" content="#c1440e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mondō">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<div class="app" id="app">
+
+  <div class="topbar">
+    <div class="side" id="topbarLeft"></div>
+    <div class="brand" onclick="App.goHome()">
+      <div class="seal">問</div>
+      <div>
+        <div class="brand-name">Mondō</div>
+        <div class="brand-sub">JLPT N1 · 反復学習</div>
+      </div>
+    </div>
+    <div class="side" id="topbarRight" style="justify-content:flex-end;">
+      <button class="iconbtn" id="themeToggle" title="Chế độ tối/sáng">🌙</button>
+      <button class="iconbtn" onclick="App.navigate('settings')" title="Cài đặt">⚙️</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="hero">
+      <div class="hero-line1">今日も一歩ずつ</div>
+      <div class="hero-line2">Từng bước một,<br>chinh phục N1.</div>
+      <div class="hero-stats" id="heroStats"></div>
+    </div>
+    <div class="section-title">Bộ dữ liệu của bạn</div>
+    <div class="dataset-grid" id="datasetGrid"></div>
+    <div class="add-dataset-card" onclick="App.navigate('import')">
+      ➕ Thêm bộ dữ liệu (JSON / CSV)
+    </div>
+  </div>
+
+  <!-- MODES -->
+  <div class="screen" id="screen-modes">
+    <div class="section-title" id="modesTitle">Chọn chế độ học</div>
+    <div class="mode-grid" id="modeGrid"></div>
+    <div id="examConfig" style="display:none;">
+      <div class="section-title">Số câu thi thử</div>
+      <div class="count-picker" id="countPicker"></div>
+      <button class="btn btn-primary" onclick="App.confirmStartExam()">Bắt đầu thi thử →</button>
+    </div>
+    <div class="section-title">Thống kê bộ này</div>
+    <div id="modesDash"></div>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-top">
+      <span id="quizPos">問題 1 / 10</span>
+      <span id="quizModeLabel">Smart Review</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="quizProgressFill" style="width:0%"></div></div>
+    <div class="stat-chip-row">
+      <div class="chip combo">🔥 <span id="chipCombo">0</span> liên tiếp</div>
+      <div class="chip correct">🟢 <span id="chipCorrect">0</span></div>
+      <div class="chip wrong">🔴 <span id="chipWrong">0</span></div>
+      <div class="chip" id="chipQWrong">Câu này sai: 0 lần</div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><span id="qDatasetLabel">N1 語彙</span></div>
+      <button class="speak-btn" onclick="App.speak()" title="Nghe phát âm">🔊</button>
+      <div class="q-text jp" id="qText"></div>
+    </div>
+    <div class="opt-list" id="optList"></div>
+    <div id="feedbackZone"></div>
+  </div>
+
+  <!-- RESULT (exam) -->
+  <div class="screen" id="screen-result">
+    <div class="result-hero">
+      <div style="font-size:13px;color:var(--ink-soft);">Kết quả bài thi thử</div>
+      <div class="result-score" id="resultScore">0%</div>
+      <div class="result-sub" id="resultSub">0/0 câu đúng</div>
+    </div>
+    <div class="hero-stats" style="justify-content:center; gap:26px; margin:18px 0 24px;" id="resultChips"></div>
+    <button class="btn btn-primary" onclick="App.reviewExam()" style="margin-bottom:10px;">Xem lại từng câu</button>
+    <button class="btn btn-ghost" onclick="App.goModes()">Quay lại chọn chế độ</button>
+    <div id="resultReview" style="margin-top:18px;"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="screen" id="screen-dashboard">
+    <div class="section-title">📊 学習状況 — Toàn bộ</div>
+    <div id="dashGlobal"></div>
+    <div class="section-title">Theo bộ dữ liệu</div>
+    <div id="dashPerDataset"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings">
+    <div class="section-title">Giao diện</div>
+    <div class="settings-list">
+      <div class="settings-row">
+        <div><div class="label">Chế độ tối</div><div class="desc">Dịu mắt khi học buổi tối</div></div>
+        <div class="switch" id="darkSwitch" onclick="App.toggleTheme()"></div>
+      </div>
+    </div>
+    <div class="section-title">Dữ liệu &amp; tiến độ</div>
+    <div class="settings-list">
+      <div class="settings-row" onclick="App.exportProgress('all')">
+        <div><div class="label">⬇️ Export toàn bộ tiến độ</div><div class="desc">Tải file JSON sao lưu lịch sử học</div></div>
+      </div>
+      <div class="settings-row" onclick="document.getElementById('importProgressFile').click()">
+        <div><div class="label">⬆️ Import tiến độ đã sao lưu</div><div class="desc">Khôi phục lịch sử từ file JSON</div></div>
+      </div>
+      <input type="file" id="importProgressFile" accept="application/json">
+      <div class="settings-row" onclick="App.navigate('import')">
+        <div><div class="label">📥 Thêm bộ dữ liệu mới</div><div class="desc">Import câu hỏi từ JSON hoặc CSV</div></div>
+      </div>
+    </div>
+    <div class="section-title">🔄 Đồng bộ nhiều thiết bị</div>
+    <div class="q-card" style="text-align:left; padding:16px;">
+      <div style="font-size:12.5px; line-height:1.8; color:var(--ink-soft); margin-bottom:12px;">
+        Kết nối một <b style="color:var(--ink)">GitHub Gist riêng tư</b> để tự động đồng bộ tiến độ giữa các thiết bị.
+        Cách lấy token: <b style="color:var(--ink)">github.com → Settings → Developer settings → Personal access tokens</b>,
+        tạo token mới chỉ cần tick quyền <code>gist</code>. Dán token vào đây — lần đầu để trống ô Gist ID, app sẽ tự tạo.
+        Thiết bị khác dùng lại đúng Token + Gist ID hiện ra bên dưới để nối vào cùng dữ liệu.
+      </div>
+      <div id="syncStatusLine" style="font-size:12.5px; font-weight:700; margin-bottom:12px;"></div>
+      <input type="password" id="syncTokenInput" placeholder="GitHub Personal Access Token" style="width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:13px; margin-bottom:8px;">
+      <input type="text" id="syncGistIdInput" placeholder="Gist ID (để trống nếu chưa có)" style="width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:13px; margin-bottom:12px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="App.handleConnectGist()" style="flex:1;">Lưu &amp; Kết nối</button>
+        <button class="btn btn-ghost btn-sm" onclick="App.handleManualSync()" style="flex:1;">Đồng bộ ngay</button>
+      </div>
+      <button class="btn btn-danger btn-sm" id="disconnectSyncBtn" onclick="App.handleDisconnectGist()" style="width:100%; margin-top:8px; display:none;">Ngắt kết nối đồng bộ</button>
+    </div>
+    <div class="section-title">Vùng nguy hiểm</div>
+    <div class="settings-list" id="dangerZone"></div>
+  </div>
+
+  <!-- IMPORT -->
+  <div class="screen" id="screen-import">
+    <div class="section-title">Thêm bộ dữ liệu mới</div>
+    <div class="q-card" style="text-align:left;">
+      <div style="font-size:13px; line-height:1.8; color:var(--ink-soft);">
+        Hỗ trợ <b style="color:var(--ink)">JSON</b> (mảng câu hỏi hoặc <code>{"name":..,"questions":[...]}</code>)
+        và <b style="color:var(--ink)">CSV</b> — tự nhận diện 1 trong 2 kiểu:<br>
+        · Có header: <code>question, option_a, option_b, option_c, option_d, answer, explanation</code> (answer là A/B/C/D hoặc 0-3)<br>
+        · Kiểu "Shin Nihongo 500" (không header, các dòng <code>title / selection problem / explanation</code> — đáp án đúng luôn là lựa chọn đầu tiên, app tự xáo trộn khi import)<br>
+        Toàn bộ xử lý diễn ra ngay trên trình duyệt, không cần Internet.
+      </div>
+    </div>
+    <input type="text" id="importDatasetName" placeholder="Tên bộ dữ liệu (bắt buộc) — vd: N1 読解" style="width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:14px; margin-bottom:4px;">
+    <div style="font-size:11.5px; color:var(--ink-soft); margin-bottom:12px;">
+      Bắt buộc nhập tên. Nếu trùng tên với bộ đã có (không phân biệt hoa/thường), câu hỏi mới sẽ được <b style="color:var(--ink)">gộp thêm</b> vào bộ đó (câu trùng nội dung sẽ tự bỏ qua) thay vì tạo bộ mới.
+    </div>
+    <div class="settings-list">
+      <div class="settings-row" onclick="App.triggerFileImport('json')">
+        <div><div class="label">📄 Chọn file JSON</div><div class="desc">Import câu hỏi định dạng JSON</div></div>
+      </div>
+      <input type="file" id="importJsonFile" accept="application/json">
+      <div class="settings-row" onclick="App.triggerFileImport('csv')">
+        <div><div class="label">📊 Chọn file CSV</div><div class="desc">Import câu hỏi định dạng CSV</div></div>
+      </div>
+      <input type="file" id="importCsvFile" accept=".csv,text/csv">
+    </div>
+    <button class="btn btn-ghost" style="margin-top:16px;" onclick="App.navigate('home')">Huỷ, quay lại trang chủ</button>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheetContent"></div>
+</div>
+<div class="overlay" id="feedbackOverlay">
+  <div class="sheet" id="feedbackSheetContent" style="max-height:82vh; overflow-y:auto;"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   MONDŌ — Japanese Quiz App with Spaced Repetition
+   Vanilla JS, single file, runs fully offline from localStorage. If
+   connected in Settings, it also auto-syncs progress to a private
+   GitHub Gist in the background so multiple devices stay in sync.
+===================================================================== */
+
+/* ---------- 1. Sample built-in datasets -----------------------------
+   Format spec (as requested):
+   { id, question, options:[4], answer: 0-3, explanation }
+--------------------------------------------------------------------- */
+const BUILTIN_DATASETS = {
+  n1_vocab: {
+    name: "JLPT N1 語彙",
+    emoji: "📖",
+    questions: [
+      { id: 1, question: "彼は責任感が強く、仕事を最後まで（　）。", options: ["やり抜く","取り消す","引き出す","見逃す"], answer: 0, explanation: "「やり抜く」は、困難があっても最後までやり通すという意味です。" },
+      { id: 2, question: "この計画は予算の関係で（　）を余儀なくされた。", options: ["断念","感嘆","納得","応援"], answer: 0, explanation: "「断念を余儀なくされる」で、やむを得ずあきらめるという意味になります。" },
+      { id: 3, question: "彼女の意見は会議の流れを大きく（　）ものだった。", options: ["左右する","流用する","模倣する","踏襲する"], answer: 0, explanation: "「左右する」は、物事の成り行きに大きな影響を与えることを意味します。" },
+      { id: 4, question: "その事件について、彼は一切の（　）を拒んだ。", options: ["釈明","賞賛","模範","歓迎"], answer: 0, explanation: "「釈明」は、誤解や非難に対して事情を説明することです。" },
+      { id: 5, question: "長年の努力が（　）、ついに新薬の開発に成功した。", options: ["実り","漏れ","滞り","偏り"], answer: 0, explanation: "「努力が実る」は、努力の結果として良い成果が出ることを表す慣用表現です。" },
+      { id: 6, question: "彼の発言は場の空気を（　）ものだった。", options: ["和ませる","損なう","彩る","支える"], answer: 1, explanation: "「空気を損なう」で、その場の雰囲気を悪くするという意味になります。" },
+      { id: 7, question: "この地域は近年、人口減少が（　）進んでいる。", options: ["著しく","おびただしく","つつましく","めざましく"], answer: 0, explanation: "「著しく」は程度がはっきりと大きい様子を表す副詞です。" },
+      { id: 8, question: "彼は上司の指示に（　）従うタイプではない。", options: ["唯々諾々と","延々と","切々と","朗々と"], answer: 0, explanation: "「唯々諾々と」は、何の反論もなく言われるままに従う様子を表します。" },
+      { id: 9, question: "会社の将来を（　）議論が続いた。", options: ["めぐる","こだわる","携わる","かかわる"], answer: 0, explanation: "「〜をめぐる」は、あるテーマを中心にして議論・対立などが起こることを表します。" },
+      { id: 10, question: "彼女は困難な状況にも（　）冷静さを失わなかった。", options: ["かかわらず","もかまわず","をものともせず","につけ"], answer: 2, explanation: "「〜をものともせず」は、困難な状況を気にせず立ち向かう様子を表す表現です。" }
+    ]
+  },
+  n1_grammar: {
+    name: "JLPT N1 文法",
+    emoji: "🧩",
+    questions: [
+      { id: 101, question: "彼が来ないと分かって（　）、みんな帰ってしまった。", options: ["からある","からいうもの","や否や","いなや"], answer: 2, explanation: "「〜や否や」は、ある動作の直後に次の動作が起こることを表します。ここでは前件が不自然なため文脈上は要修正例文ですが文法形自体を問う問題です。" },
+      { id: 102, question: "この結果は努力（　）得られたものだ。", options: ["なくして","なくしては","をおいて","にひきかえ"], answer: 1, explanation: "「〜なくしては〜ない」で、それがなければ成立しないという強い条件を表します。" },
+      { id: 103, question: "彼の説明は分かりやすい（　）、専門用語が多すぎる。", options: ["反面","限り","あまり","次第"], answer: 0, explanation: "「〜反面」は、一つの物事が持つ相反する二つの側面を対比して述べる表現です。" },
+      { id: 104, question: "台風の接近（　）、イベントは中止になった。", options: ["にともない","にひきかえ","にかまけて","をよそに"], answer: 0, explanation: "「〜にともない」は、一方の変化に伴って他方も変化・発生することを表します。" },
+      { id: 105, question: "彼は周囲の反対（　）、自分の計画を実行した。", options: ["にそって","をよそに","にもまして","にかたくない"], answer: 1, explanation: "「〜をよそに」は、周囲の心配や反対を気にせず物事を行うことを表します。" },
+      { id: 106, question: "今さら後悔した（　）、もう取り返しがつかない。", options: ["ところで","ばかりに","が最後","ものを"], answer: 0, explanation: "「〜たところで」は、〜しても無駄だという意味を表す逆接的な表現です。" },
+      { id: 107, question: "彼の頑張り（　）、プロジェクトは成功した。", options: ["があっての","にたえない","にかたくない","をおいて"], answer: 0, explanation: "「〜があっての」は、それがあるからこそ成り立つという意味を表します。" },
+      { id: 108, question: "資料を確認する（　）、会議に臨んだ。", options: ["や否や","が早いか","にとどまらず","上で"], answer: 3, explanation: "「〜上で」は、ある行為を済ませてから次の行為に移ることを表します。" }
+    ]
+  },
+  n1_kanji: {
+    name: "JLPT N1 漢字",
+    emoji: "字",
+    questions: [
+      { id: 201, question: "「遂行」の読み方として正しいものはどれか。", options: ["すいこう","ついこう","すいぎょう","ついぎょう"], answer: 0, explanation: "「遂行」は「すいこう」と読み、任務や計画を成し遂げて行うという意味です。" },
+      { id: 202, question: "「顕著」の読み方として正しいものはどれか。", options: ["けんちょ","げんちょ","けんじょ","げんじょ"], answer: 0, explanation: "「顕著」は「けんちょ」と読み、はっきりと目立つ様子を表します。" },
+      { id: 203, question: "「妥協」の読み方として正しいものはどれか。", options: ["だきょう","たきょう","だごう","たごう"], answer: 0, explanation: "「妥協」は「だきょう」と読み、譲り合って解決点を見出すことです。" },
+      { id: 204, question: "「払拭」の読み方として正しいものはどれか。", options: ["ふっしょく","はらぬぐい","ふつじょく","はっしょく"], answer: 0, explanation: "「払拭」は「ふっしょく」と読み、疑念などをすっかり取り除くことです。" },
+      { id: 205, question: "「猶予」の読み方として正しいものはどれか。", options: ["ゆうよ","ゆうじょ","ようよ","ようじょ"], answer: 0, explanation: "「猶予」は「ゆうよ」と読み、実行や決定を先延ばしにすることです。" }
+    ]
+  }
+};
+
+/* ---------- 2. Storage helpers (localStorage + GitHub Gist sync) -----
+   Source of truth is this browser's localStorage — instant, works
+   fully offline. If the user connects a GitHub token + Gist (Settings
+   screen), every local change is also pushed to that Gist in the
+   background (debounced, so rapid answers don't spam the API), and on
+   startup we pull the Gist in the background and merge in whichever
+   copy (local vs remote) has the newer `updatedAt` timestamp — so
+   opening the app on another device picks up the latest progress.
+--------------------------------------------------------------------- */
+const LS_DATA_KEY = 'mondo_data_v3';
+const LS_SYNC_KEY = 'mondo_sync_cfg_v1';
+const GIST_FILENAME = 'mondo_progress.json';
+
+const CACHE = { progress: {}, customDatasets: {}, theme: 'light', dailyLog: {}, updatedAt: 0, ready: false };
+const SYNC = { token: '', gistId: '', lastSyncedAt: 0, status: 'idle', lastError: '' }; // status: idle|syncing|ok|error
+
+let _pushDebounce = null;
+
+function loadLocalData() {
+  try {
+    const raw = localStorage.getItem(LS_DATA_KEY);
+    if (raw) Object.assign(CACHE, JSON.parse(raw));
+  } catch (e) { console.error('Local load failed', e); }
+  try {
+    const rawSync = localStorage.getItem(LS_SYNC_KEY);
+    if (rawSync) Object.assign(SYNC, JSON.parse(rawSync));
+  } catch (e) { console.error('Sync config load failed', e); }
+  CACHE.ready = true;
+}
+
+function snapshotData() {
+  return {
+    progress: CACHE.progress, customDatasets: CACHE.customDatasets,
+    theme: CACHE.theme, dailyLog: CACHE.dailyLog, updatedAt: CACHE.updatedAt,
+  };
+}
+
+function persistLocal() {
+  CACHE.updatedAt = Date.now();
+  try { localStorage.setItem(LS_DATA_KEY, JSON.stringify(snapshotData())); }
+  catch (e) { console.error('Local save failed', e); if (typeof App !== 'undefined') App.toast('Không lưu được vào bộ nhớ trình duyệt.'); }
+  scheduleCloudPush();
+}
+
+function persistSyncCfg() {
+  try { localStorage.setItem(LS_SYNC_KEY, JSON.stringify(SYNC)); } catch (e) { /* ignore */ }
+}
+
+function scheduleCloudPush() {
+  if (!SYNC.token || !SYNC.gistId) return;
+  clearTimeout(_pushDebounce);
+  _pushDebounce = setTimeout(() => pushToGist(), 3000);
+}
+
+function setSyncStatus(status, err) {
+  SYNC.status = status;
+  SYNC.lastError = err || '';
+  if (status === 'ok') SYNC.lastSyncedAt = Date.now();
+  persistSyncCfg();
+  if (typeof App !== 'undefined' && App.state.screen === 'settings') App.renderSettings();
+}
+
+async function githubRequest(url, options) {
+  const res = await fetch(url, Object.assign({}, options, {
+    headers: Object.assign({
+      'Authorization': `token ${SYNC.token}`,
+      'Accept': 'application/vnd.github+json',
+    }, (options && options.headers) || {}),
+  }));
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j.message || ''; } catch (e) { /* ignore */ }
+    throw new Error(`GitHub API ${res.status}${detail ? ' — ' + detail : ''}`);
+  }
+  return res.json();
+}
+
+async function pushToGist() {
+  if (!SYNC.token || !SYNC.gistId) return;
+  setSyncStatus('syncing');
+  try {
+    await githubRequest(`https://api.github.com/gists/${SYNC.gistId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(snapshotData()) } } }),
+    });
+    setSyncStatus('ok');
+  } catch (e) {
+    console.error('Gist push failed', e);
+    setSyncStatus('error', e.message);
+  }
+}
+
+async function pullFromGist() {
+  if (!SYNC.token || !SYNC.gistId) return null;
+  try {
+    const gist = await githubRequest(`https://api.github.com/gists/${SYNC.gistId}`, {});
+    const file = gist.files && gist.files[GIST_FILENAME];
+    if (!file || !file.content) return null;
+    return JSON.parse(file.content);
+  } catch (e) {
+    console.error('Gist pull failed', e);
+    setSyncStatus('error', e.message);
+    return null;
+  }
+}
+
+async function createGist() {
+  const gist = await githubRequest('https://api.github.com/gists', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      description: 'Mondō — JLPT quiz progress (auto-managed by the app, safe to leave alone)',
+      public: false,
+      files: { [GIST_FILENAME]: { content: JSON.stringify(snapshotData()) } },
+    }),
+  });
+  return gist.id;
+}
+
+async function syncOnStartup() {
+  if (!SYNC.token || !SYNC.gistId) return;
+  setSyncStatus('syncing');
+  const remote = await pullFromGist();
+  if (remote && (remote.updatedAt || 0) > (CACHE.updatedAt || 0)) {
+    CACHE.progress = remote.progress || {};
+    CACHE.customDatasets = remote.customDatasets || {};
+    CACHE.theme = remote.theme || CACHE.theme;
+    CACHE.dailyLog = remote.dailyLog || {};
+    CACHE.updatedAt = remote.updatedAt;
+    try { localStorage.setItem(LS_DATA_KEY, JSON.stringify(snapshotData())); } catch (e) { /* ignore */ }
+    if (typeof App !== 'undefined') {
+      App.toast('Đã tải tiến độ mới nhất từ cloud.');
+      App.applyTheme();
+      App.renderHome();
+    }
+  }
+  setSyncStatus(remote ? 'ok' : 'error', remote ? '' : 'Không đọc được dữ liệu từ Gist.');
+}
+
+async function connectGist(token, gistId) {
+  SYNC.token = token.trim();
+  SYNC.gistId = gistId.trim();
+  persistSyncCfg();
+  setSyncStatus('syncing');
+  try {
+    if (!SYNC.gistId) {
+      SYNC.gistId = await createGist();
+      persistSyncCfg();
+    } else {
+      const remote = await pullFromGist();
+      if (remote && (remote.updatedAt || 0) > (CACHE.updatedAt || 0)) {
+        CACHE.progress = remote.progress || {};
+        CACHE.customDatasets = remote.customDatasets || {};
+        CACHE.theme = remote.theme || CACHE.theme;
+        CACHE.dailyLog = remote.dailyLog || {};
+        CACHE.updatedAt = remote.updatedAt;
+        try { localStorage.setItem(LS_DATA_KEY, JSON.stringify(snapshotData())); } catch (e) { /* ignore */ }
+      } else {
+        await pushToGist();
+      }
+    }
+    setSyncStatus('ok');
+    return true;
+  } catch (e) {
+    console.error('Connect gist failed', e);
+    setSyncStatus('error', e.message);
+    return false;
+  }
+}
+
+function disconnectGist() {
+  SYNC.token = ''; SYNC.gistId = ''; SYNC.status = 'idle'; SYNC.lastError = '';
+  persistSyncCfg();
+}
+
+function getAllDatasets() {
+  return Object.assign({}, BUILTIN_DATASETS, CACHE.customDatasets);
+}
+function getDataset(id) { return getAllDatasets()[id]; }
+
+function getProgress(dsId) { return CACHE.progress[dsId] || {}; }
+function saveProgress(dsId, prog) { CACHE.progress[dsId] = prog; persistLocal(); }
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function logDailyActivity(correctDelta, attemptDelta) {
+  const t = todayStr();
+  if (!CACHE.dailyLog[t]) CACHE.dailyLog[t] = { attempts: 0, correct: 0 };
+  CACHE.dailyLog[t].attempts += attemptDelta;
+  CACHE.dailyLog[t].correct += correctDelta;
+  persistLocal();
+}
+
+/* ---------- 3. Spaced repetition core --------------------------------- */
+const WRONG_WEIGHTS = [1, 3, 6, 10, 15];
+const REVIEW_INTERVAL_DAYS = [0, 1, 3, 7, 14, 30]; // indexed by consecutiveCorrect (capped)
+
+function freshProgressEntry() {
+  return {
+    correctCount: 0, wrongCount: 0, totalAttempts: 0,
+    lastAnswered: null, consecutiveCorrect: 0, consecutiveWrong: 0,
+    memoryScore: 0, nextReview: null, status: "new"
+  };
+}
+
+function computeStatus(p) {
+  if (p.totalAttempts === 0) return "new";
+  if (p.memoryScore >= 85 && p.consecutiveCorrect >= 3) return "mastered";
+  if (p.wrongCount >= 3 && p.consecutiveCorrect < 2) return "struggling";
+  if (p.memoryScore < 50) return "needs_review";
+  return "learning";
+}
+
+function applyAnswer(dsId, qId, isCorrect) {
+  const prog = getProgress(dsId);
+  const p = prog[qId] ? Object.assign({}, prog[qId]) : freshProgressEntry();
+  p.totalAttempts += 1;
+  p.lastAnswered = new Date().toISOString();
+
+  if (isCorrect) {
+    p.correctCount += 1;
+    p.consecutiveCorrect += 1;
+    p.consecutiveWrong = 0;
+    const gain = Math.max(6, 20 - p.wrongCount * 2);
+    p.memoryScore = Math.min(100, p.memoryScore + gain);
+  } else {
+    p.wrongCount += 1;
+    p.consecutiveWrong += 1;
+    p.consecutiveCorrect = 0;
+    p.memoryScore = Math.max(0, p.memoryScore - 25);
+  }
+
+  const idx = Math.min(p.consecutiveCorrect, REVIEW_INTERVAL_DAYS.length - 1);
+  const days = isCorrect ? REVIEW_INTERVAL_DAYS[idx] : 0;
+  const next = new Date();
+  next.setDate(next.getDate() + days);
+  p.nextReview = next.toISOString();
+  p.status = computeStatus(p);
+
+  prog[qId] = p;
+  saveProgress(dsId, prog);
+  logDailyActivity(isCorrect ? 1 : 0, 1);
+  return p;
+}
+
+function weightFor(prog) {
+  if (!prog || prog.totalAttempts === 0) return 12; // unseen: high baseline priority
+  let w = WRONG_WEIGHTS[Math.min(prog.wrongCount, 4)];
+  if (prog.consecutiveCorrect >= 3) w *= 0.12;
+  else if (prog.consecutiveCorrect === 2) w *= 0.35;
+  else if (prog.consecutiveCorrect === 1) w *= 0.65;
+
+  if (prog.nextReview) {
+    const overdueMs = Date.now() - new Date(prog.nextReview).getTime();
+    if (overdueMs >= 0) w *= 1.6;
+    if (overdueMs > 1000 * 60 * 60 * 24 * 5) w *= 1.3; // very overdue
+  }
+  return Math.max(w, 0.05);
+}
+
+function weightedPick(pool, weightFn, excludeIds) {
+  const candidates = pool.filter(q => !excludeIds.includes(q.id));
+  const usable = candidates.length ? candidates : pool; // allow repeats if pool tiny
+  const weights = usable.map(weightFn);
+  const total = weights.reduce((a,b) => a+b, 0);
+  if (total <= 0) return usable[Math.floor(Math.random()*usable.length)];
+  let r = Math.random() * total;
+  for (let i = 0; i < usable.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return usable[i];
+  }
+  return usable[usable.length - 1];
+}
+
+function buildPoolForMode(dsId, mode) {
+  const ds = getDataset(dsId);
+  const prog = getProgress(dsId);
+  const all = ds.questions;
+  if (mode === 'new') {
+    return all.filter(q => !prog[q.id] || prog[q.id].totalAttempts < 2);
+  }
+  if (mode === 'wrong') {
+    return all.filter(q => prog[q.id] && prog[q.id].wrongCount > 0 && prog[q.id].status !== 'mastered');
+  }
+  if (mode === 'exam') {
+    return all.slice();
+  }
+  // smart review (default): everything, weighting handles priority
+  return all.slice();
+}
+
+/* ---------- 4. Dataset stats ------------------------------------------ */
+function datasetStats(dsId) {
+  const ds = getDataset(dsId);
+  const prog = getProgress(dsId);
+  const total = ds.questions.length;
+  let done = 0, correctSum = 0, wrongSum = 0, mastered = 0, learning = 0, needsReview = 0, struggling = 0, neverDone = 0;
+  ds.questions.forEach(q => {
+    const p = prog[q.id];
+    if (!p || p.totalAttempts === 0) { neverDone++; return; }
+    done++;
+    correctSum += p.correctCount;
+    wrongSum += p.wrongCount;
+    const st = p.status || computeStatus(p);
+    if (st === 'mastered') mastered++;
+    else if (st === 'struggling') struggling++;
+    else if (st === 'needs_review') needsReview++;
+    else learning++;
+  });
+  const totalAttempts = correctSum + wrongSum;
+  const accuracy = totalAttempts > 0 ? (correctSum / totalAttempts * 100) : 0;
+  return { total, done, neverDone, correctSum, wrongSum, mastered, learning, needsReview, struggling, accuracy,
+           progressPct: total ? Math.round(done/total*100) : 0 };
+}
+
+function globalStats() {
+  const all = getAllDatasets();
+  let agg = { total:0, done:0, neverDone:0, correctSum:0, wrongSum:0, mastered:0, learning:0, needsReview:0, struggling:0 };
+  Object.keys(all).forEach(id => {
+    const s = datasetStats(id);
+    agg.total += s.total; agg.done += s.done; agg.neverDone += s.neverDone;
+    agg.correctSum += s.correctSum; agg.wrongSum += s.wrongSum;
+    agg.mastered += s.mastered; agg.learning += s.learning;
+    agg.needsReview += s.needsReview; agg.struggling += s.struggling;
+  });
+  const totalAttempts = agg.correctSum + agg.wrongSum;
+  agg.accuracy = totalAttempts ? (agg.correctSum/totalAttempts*100) : 0;
+  return agg;
+}
+
+function topWrongQuestions(limit=5) {
+  const all = getAllDatasets();
+  let rows = [];
+  Object.keys(all).forEach(dsId => {
+    const prog = getProgress(dsId);
+    const ds = all[dsId];
+    ds.questions.forEach(q => {
+      const p = prog[q.id];
+      if (p && p.wrongCount > 0) rows.push({ dsId, dsName: ds.name, q, wrongCount: p.wrongCount });
+    });
+  });
+  rows.sort((a,b) => b.wrongCount - a.wrongCount);
+  return rows.slice(0, limit);
+}
+
+/* ---------- 5. App state & navigation ---------------------------------- */
+const App = {
+  state: {
+    screen: 'home',
+    dsId: null,
+    mode: null,
+    examCount: 20,
+    quizQueue: [],
+    quizIndex: 0,
+    session: { correct: 0, wrong: 0, combo: 0, maxCombo: 0 },
+    currentQ: null,
+    answered: false,
+    excludeRecent: [],
+    examAnswers: [],
+    voiceReady: false,
+  },
+
+  init() {
+    document.getElementById('importJsonFile').addEventListener('change', (e) => this.handleImportFile(e, 'json'));
+    document.getElementById('importCsvFile').addEventListener('change', (e) => this.handleImportFile(e, 'csv'));
+    document.getElementById('importProgressFile').addEventListener('change', (e) => this.handleImportProgress(e));
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => { this.state.voiceReady = true; };
+    }
+    document.getElementById('themeToggle').onclick = () => this.toggleTheme();
+
+    // Local load is synchronous and instant — render right away (offline-first),
+    // then reconcile with the cloud Gist copy in the background if configured.
+    loadLocalData();
+    this.applyTheme();
+    this.renderHome();
+
+    if (SYNC.token && SYNC.gistId) {
+      syncOnStartup().catch(e => console.error('Background sync failed', e));
+    }
+  },
+
+  applyTheme() {
+    const theme = CACHE.theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+    document.getElementById('darkSwitch').classList.toggle('on', theme === 'dark');
+  },
+
+  toggleTheme() {
+    const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    CACHE.theme = next;
+    this.applyTheme();
+    persistLocal();
+  },
+
+  navigate(screen) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + screen).classList.add('active');
+    this.state.screen = screen;
+    window.scrollTo(0,0);
+    if (screen === 'dashboard') this.renderDashboardScreen();
+    if (screen === 'settings') this.renderSettings();
+    if (screen === 'home') this.renderHome();
+  },
+
+  goHome() { this.navigate('home'); },
+  goModes() { this.navigate('modes'); },
+
+  /* ---------- HOME ---------- */
+  renderHome() {
+    const all = getAllDatasets();
+    const g = globalStats();
+    document.getElementById('heroStats').innerHTML = `
+      <div class="hero-stat"><b>${g.done}</b><span>đã học</span></div>
+      <div class="hero-stat"><b>${g.accuracy.toFixed(0)}%</b><span>độ chính xác</span></div>
+      <div class="hero-stat"><b>${g.needsReview + g.struggling}</b><span>cần ôn</span></div>
+    `;
+    const grid = document.getElementById('datasetGrid');
+    grid.innerHTML = '';
+    Object.keys(all).forEach(id => {
+      const ds = all[id];
+      const s = datasetStats(id);
+      const card = document.createElement('div');
+      card.className = 'dataset-card';
+      card.onclick = () => this.openDataset(id);
+      card.innerHTML = `
+        <div class="dc-top">
+          <div class="dc-emoji">${ds.emoji || '📘'}</div>
+          <div>
+            <div class="dc-name jp">${ds.name}</div>
+            <div class="dc-meta">${s.done}/${s.total} câu · ${s.accuracy.toFixed(0)}% đúng</div>
+          </div>
+        </div>
+        <div class="dc-bar-wrap"><div class="dc-bar" style="width:${s.progressPct}%"></div></div>
+        <div class="dc-foot">
+          <span>🏆 ${s.mastered} Perfect</span>
+          <span>⚠️ ${s.struggling + s.needsReview} cần ôn</span>
+        </div>`;
+      grid.appendChild(card);
+    });
+  },
+
+  openDataset(id) {
+    this.state.dsId = id;
+    this.navigate('modes');
+    this.renderModes();
+  },
+
+  /* ---------- MODES ---------- */
+  renderModes() {
+    const ds = getDataset(this.state.dsId);
+    document.getElementById('modesTitle').textContent = `Chọn chế độ học · ${ds.name}`;
+    const s = datasetStats(this.state.dsId);
+    const newPool = buildPoolForMode(this.state.dsId, 'new').length;
+    const wrongPool = buildPoolForMode(this.state.dsId, 'wrong').length;
+
+    const modes = [
+      { key: 'new', icon: '🌱', bg: '#e4f1e9', color: '#2f5640', title: 'Học mới', desc: 'Ưu tiên câu chưa làm hoặc mới làm ít lần.', count: newPool },
+      { key: 'wrong', icon: '🎯', bg: '#f7e2d8', color: '#9c3509', title: 'Ôn câu sai', desc: 'Chỉ luyện lại những câu bạn từng trả lời sai.', count: wrongPool },
+      { key: 'smart', icon: '✨', bg: '#f3e0b8', color: '#7a5a13', title: 'Smart Review', desc: 'Kết hợp thông minh: câu mới, câu sai, câu cần ôn.', count: ds.questions.length },
+      { key: 'exam', icon: '📝', bg: '#e0e6f1', color: '#28345c', title: 'Thi thử', desc: 'Làm một bài thi thật, chấm điểm cuối bài.', count: ds.questions.length },
+    ];
+    const grid = document.getElementById('modeGrid');
+    grid.innerHTML = '';
+    modes.forEach(m => {
+      const card = document.createElement('div');
+      card.className = 'mode-card';
+      card.onclick = () => this.selectMode(m.key);
+      card.innerHTML = `
+        <div class="mode-icon" style="background:${m.bg}; color:${m.color};">${m.icon}</div>
+        <div>
+          <div class="mode-title">${m.title}</div>
+          <div class="mode-desc">${m.desc}</div>
+        </div>
+        <div class="mode-count">${m.count}<br><span style="font-weight:400;">câu</span></div>`;
+      grid.appendChild(card);
+    });
+    document.getElementById('examConfig').style.display = 'none';
+
+    document.getElementById('modesDash').innerHTML = `
+      <div class="dash-grid">
+        <div class="dash-card"><b>${s.progressPct}%</b><span>tiến độ</span></div>
+        <div class="dash-card"><b>${s.accuracy.toFixed(0)}%</b><span>độ chính xác</span></div>
+        <div class="dash-card"><b>${s.mastered}</b><span>🏆 Perfect</span></div>
+        <div class="dash-card"><b>${s.struggling + s.needsReview}</b><span>⚠️ Cần ôn</span></div>
+      </div>`;
+  },
+
+  selectMode(mode) {
+    if (mode === 'exam') {
+      const total = getDataset(this.state.dsId).questions.length;
+      const options = [10, 20, 30, total].filter((v,i,a)=> v>0 && a.indexOf(v)===i && v<=total);
+      const picker = document.getElementById('countPicker');
+      picker.innerHTML = '';
+      options.forEach(n => {
+        const b = document.createElement('div');
+        b.className = 'count-opt' + (n === Math.min(20,total) ? ' active' : '');
+        b.textContent = n === total ? `Tất cả (${n})` : `${n} câu`;
+        b.onclick = () => { document.querySelectorAll('.count-opt').forEach(x=>x.classList.remove('active')); b.classList.add('active'); this.state.examCount = n; };
+        picker.appendChild(b);
+      });
+      this.state.examCount = Math.min(20, total);
+      document.getElementById('examConfig').style.display = 'block';
+      return;
+    }
+    const pool = buildPoolForMode(this.state.dsId, mode);
+    if (pool.length === 0) {
+      this.toast(mode === 'wrong' ? 'Chưa có câu nào sai để ôn 🎉' : 'Không còn câu nào phù hợp trong chế độ này.');
+      return;
+    }
+    this.startQuiz(mode, pool.length);
+  },
+
+  confirmStartExam() {
+    this.startQuiz('exam', this.state.examCount);
+  },
+
+  /* ---------- QUIZ ENGINE ---------- */
+  startQuiz(mode, count) {
+    this.state.mode = mode;
+    const ds = getDataset(this.state.dsId);
+    let queue;
+    if (mode === 'exam') {
+      const shuffled = ds.questions.slice().sort(() => Math.random() - 0.5);
+      queue = shuffled.slice(0, count);
+    } else {
+      queue = { pool: buildPoolForMode(this.state.dsId, mode), remainingCount: count };
+    }
+    this.state.quizQueue = queue;
+    this.state.quizIndex = 0;
+    this.state.session = { correct: 0, wrong: 0, combo: 0, maxCombo: 0 };
+    this.state.excludeRecent = [];
+    this.state.examAnswers = [];
+    this.navigate('quiz');
+    document.getElementById('quizModeLabel').textContent = this.modeLabel(mode);
+    document.getElementById('qDatasetLabel').textContent = ds.name;
+    this.loadNextQuestion();
+  },
+
+  modeLabel(mode) {
+    return { new: 'Học mới', wrong: 'Ôn câu sai', smart: 'Smart Review', exam: 'Thi thử' }[mode] || mode;
+  },
+
+  loadNextQuestion() {
+    const ds = getDataset(this.state.dsId);
+    const mode = this.state.mode;
+    let q;
+    let posTotal;
+
+    if (mode === 'exam') {
+      if (this.state.quizIndex >= this.state.quizQueue.length) { this.finishExam(); return; }
+      q = this.state.quizQueue[this.state.quizIndex];
+      posTotal = this.state.quizQueue.length;
+    } else {
+      const { pool } = this.state.quizQueue;
+      const attemptedThisSession = this.state.quizIndex;
+      const target = this.state.quizQueue.remainingCount;
+      if (attemptedThisSession >= target) {
+        this.showSessionComplete();
+        return;
+      }
+      const prog = getProgress(this.state.dsId);
+      const weightFn = (qq) => weightFor(prog[qq.id]);
+      q = weightedPick(pool, weightFn, this.state.excludeRecent.slice(-2));
+      posTotal = target;
+    }
+
+    this.state.currentQ = q;
+    this.state.answered = false;
+    this.state.excludeRecent.push(q.id);
+    if (this.state.excludeRecent.length > 4) this.state.excludeRecent.shift();
+
+    document.getElementById('quizPos').textContent = `問題 ${this.state.quizIndex + 1} / ${posTotal}`;
+    document.getElementById('quizProgressFill').style.width = `${((this.state.quizIndex) / posTotal) * 100}%`;
+    document.getElementById('chipCombo').textContent = this.state.session.combo;
+    document.getElementById('chipCorrect').textContent = this.state.session.correct;
+    document.getElementById('chipWrong').textContent = this.state.session.wrong;
+    const prog = getProgress(this.state.dsId);
+    const p = prog[q.id];
+    document.getElementById('chipQWrong').textContent = `Câu này sai: ${p ? p.wrongCount : 0} lần`;
+    document.getElementById('chipQWrong').style.display = mode === 'exam' ? 'none' : 'flex';
+
+    document.getElementById('qText').textContent = q.question;
+    const optList = document.getElementById('optList');
+    optList.innerHTML = '';
+    const letters = ['A','B','C','D'];
+    q.options.forEach((opt, i) => {
+      const div = document.createElement('div');
+      div.className = 'opt';
+      div.innerHTML = `<span class="letter">${letters[i]}</span><span>${opt}</span>`;
+      div.onclick = () => this.handleAnswer(i);
+      optList.appendChild(div);
+    });
+    document.getElementById('feedbackZone').innerHTML = '';
+  },
+
+  handleAnswer(selectedIndex) {
+    if (this.state.answered) return;
+    this.state.answered = true;
+    const q = this.state.currentQ;
+    const isCorrect = selectedIndex === q.answer;
+    const opts = document.querySelectorAll('#optList .opt');
+    const letters = ['A','B','C','D'];
+
+    if (this.state.mode === 'exam') {
+      opts.forEach((o,i) => {
+        o.classList.add('locked');
+        if (i === selectedIndex && isCorrect) o.classList.add('selected-correct');
+        else if (i === selectedIndex && !isCorrect) o.classList.add('selected-wrong');
+        else o.classList.add('dim');
+      });
+      this.state.examAnswers.push({ q, selectedIndex, isCorrect });
+      if (isCorrect) { this.state.session.correct++; this.state.session.combo++; }
+      else { this.state.session.wrong++; this.state.session.combo = 0; }
+      this.state.session.maxCombo = Math.max(this.state.session.maxCombo, this.state.session.combo);
+      document.getElementById('chipCombo').textContent = this.state.session.combo;
+      document.getElementById('chipCorrect').textContent = this.state.session.correct;
+      document.getElementById('chipWrong').textContent = this.state.session.wrong;
+      this.showFeedbackPopup(`
+        <div class="feedback ${isCorrect ? 'ok' : 'no'}" style="margin-bottom:0;">
+          <div class="fb-head">${isCorrect ? '🟢 正解！' : '🔴 不正解'}</div>
+          <div class="fb-row" style="color:var(--ink-soft);">Chế độ thi thử — đáp án đúng sẽ hiện khi xem lại cuối bài.</div>
+        </div>
+        <div class="next-btn-wrap"><button class="btn btn-primary" onclick="App.nextQuestion()">次の問題 →</button></div>`);
+      return;
+    }
+
+    const updated = applyAnswer(this.state.dsId, q.id, isCorrect);
+
+    opts.forEach((o,i) => {
+      o.classList.add('locked');
+      if (isCorrect) {
+        if (i === selectedIndex) o.classList.add('selected-correct');
+        else o.classList.add('dim');
+      } else {
+        if (i === selectedIndex) o.classList.add('selected-wrong');
+        else if (i === q.answer) o.classList.add('reveal-correct');
+        else o.classList.add('dim');
+      }
+    });
+
+    if (isCorrect) {
+      this.state.session.correct++; this.state.session.combo++;
+      this.state.session.maxCombo = Math.max(this.state.session.maxCombo, this.state.session.combo);
+    } else {
+      this.state.session.wrong++; this.state.session.combo = 0;
+    }
+
+    let fbHtml;
+    if (isCorrect) {
+      fbHtml = `
+        <div class="feedback ok" style="margin-bottom:0;">
+          <div class="fb-head">🟢 正解！</div>
+          <div class="fb-row"><span class="fb-label">Đáp án đúng</span><b>${letters[q.answer]}. ${q.options[q.answer]}</b></div>
+          <div class="fb-explain jp">${q.explanation}</div>
+          <div class="fb-row" style="margin-top:10px;">正解回数: ${updated.correctCount} ／ 不正解回数: ${updated.wrongCount}</div>
+        </div>
+        <div class="next-btn-wrap"><button class="btn btn-primary" onclick="App.nextQuestion()">次の問題 →</button></div>`;
+    } else {
+      const priorityLabel = updated.wrongCount >= 3 ? '非常に高い（要優先復習）' : updated.wrongCount === 2 ? '高い' : '中';
+      fbHtml = `
+        <div class="feedback no" style="margin-bottom:0;">
+          <div class="fb-head">🔴 不正解</div>
+          <div class="fb-row"><span class="fb-label">あなたの回答</span><b>${letters[selectedIndex]}. ${q.options[selectedIndex]}</b></div>
+          <div class="fb-row"><span class="fb-label">正解</span><b>${letters[q.answer]}. ${q.options[q.answer]}</b></div>
+          <div class="fb-explain jp">${q.explanation}</div>
+          <div class="fb-row" style="margin-top:10px;">この問題の不正解回数: ${updated.wrongCount}回</div>
+          <div class="fb-priority">⚠️ 復習優先度: ${priorityLabel}</div>
+        </div>
+        <div class="next-btn-wrap"><button class="btn btn-primary" onclick="App.nextQuestion()">次の問題 →</button></div>`;
+    }
+    document.getElementById('chipCombo').textContent = this.state.session.combo;
+    document.getElementById('chipCorrect').textContent = this.state.session.correct;
+    document.getElementById('chipWrong').textContent = this.state.session.wrong;
+    this.showFeedbackPopup(fbHtml);
+  },
+
+  showFeedbackPopup(html) {
+    document.getElementById('feedbackSheetContent').innerHTML = html;
+    document.getElementById('feedbackOverlay').classList.add('show');
+  },
+  hideFeedbackPopup() {
+    document.getElementById('feedbackOverlay').classList.remove('show');
+  },
+
+  nextQuestion() {
+    this.hideFeedbackPopup();
+    this.state.quizIndex++;
+    this.loadNextQuestion();
+  },
+
+  showSessionComplete() {
+    const s = this.state.session;
+    const zone = document.getElementById('optList');
+    zone.innerHTML = '';
+    document.getElementById('qText').textContent = '✅ Hoàn thành phiên học!';
+    document.getElementById('quizProgressFill').style.width = '100%';
+    document.getElementById('feedbackZone').innerHTML = `
+      <div class="feedback ok">
+        <div class="fb-head">🎉 Xong phiên học này</div>
+        <div class="fb-row">Đúng: ${s.correct} · Sai: ${s.wrong} · Combo cao nhất: ${s.maxCombo}</div>
+      </div>
+      <div class="next-btn-wrap" style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn btn-primary" onclick="App.selectMode('${this.state.mode}')">Học thêm một phiên nữa</button>
+        <button class="btn btn-ghost" onclick="App.goModes()">Quay lại chọn chế độ</button>
+      </div>`;
+  },
+
+  finishExam() {
+    this.navigate('result');
+    const answers = this.state.examAnswers;
+    const total = answers.length;
+    const correct = answers.filter(a => a.isCorrect).length;
+    const pct = total ? Math.round(correct/total*100) : 0;
+    document.getElementById('resultScore').textContent = `${pct}%`;
+    document.getElementById('resultSub').textContent = `${correct}/${total} câu đúng`;
+    document.getElementById('resultChips').innerHTML = `
+      <div class="hero-stat" style="color:var(--ink);"><b>${correct}</b><span>đúng</span></div>
+      <div class="hero-stat" style="color:var(--ink);"><b>${total-correct}</b><span>sai</span></div>
+      <div class="hero-stat" style="color:var(--ink);"><b>${this.state.session.maxCombo}</b><span>combo cao nhất</span></div>`;
+    document.getElementById('resultReview').innerHTML = '';
+  },
+
+  reviewExam() {
+    const letters = ['A','B','C','D'];
+    const container = document.getElementById('resultReview');
+    container.innerHTML = '<div class="section-title">Xem lại từng câu</div>';
+    this.state.examAnswers.forEach((a, i) => {
+      const div = document.createElement('div');
+      div.className = 'review-item';
+      div.innerHTML = `
+        <div class="review-q jp">${i+1}. ${a.q.question}</div>
+        <div class="review-row ${a.isCorrect ? 'good' : 'bad'}">${a.isCorrect ? '🟢 Đúng' : '🔴 Sai'} — bạn chọn ${letters[a.selectedIndex]}. ${a.q.options[a.selectedIndex]}</div>
+        ${!a.isCorrect ? `<div class="review-row good">Đáp án đúng: ${letters[a.q.answer]}. ${a.q.options[a.q.answer]}</div>` : ''}
+        <div class="review-row" style="margin-top:4px;">${a.q.explanation}</div>`;
+      container.appendChild(div);
+    });
+  },
+
+  /* ---------- SPEECH ---------- */
+  speak() {
+    if (!('speechSynthesis' in window)) { this.toast('Trình duyệt này không hỗ trợ phát âm.'); return; }
+    const text = this.state.currentQ ? this.state.currentQ.question.replace(/（.*?）/g, '') : '';
+    if (!text) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'ja-JP';
+    const voices = window.speechSynthesis.getVoices();
+    const jaVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ja'));
+    if (jaVoice) utter.voice = jaVoice;
+    else this.toast('Không tìm thấy giọng tiếng Nhật trên thiết bị này — vẫn thử phát âm.');
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  },
+
+  /* ---------- DASHBOARD ---------- */
+  renderDashboardScreen() {
+    const g = globalStats();
+    document.getElementById('dashGlobal').innerHTML = `
+      <div class="dash-grid">
+        <div class="dash-card"><b>${g.total}</b><span>Tổng số câu</span></div>
+        <div class="dash-card"><b>${g.done}</b><span>Đã làm</span></div>
+        <div class="dash-card"><b>${g.accuracy.toFixed(1)}%</b><span>Độ chính xác</span></div>
+        <div class="dash-card"><b>${g.correctSum + g.wrongSum}</b><span>Tổng lượt trả lời</span></div>
+        <div class="dash-card dash-wide">
+          <span style="display:block; margin-bottom:8px;">Phân bố trạng thái</span>
+          <div class="status-bars">
+            ${statusRow('⚪ Chưa trả lời', g.neverDone, g.total, 'var(--ink-soft)')}
+            ${statusRow('🔴 Not good', g.struggling, g.total, 'var(--vermilion)')}
+            ${statusRow('🟠 So so', g.needsReview, g.total, '#c98a3f')}
+            ${statusRow('🟡 Good', g.learning, g.total, 'var(--gold)')}
+            ${statusRow('🏆 Perfect', g.mastered, g.total, 'var(--bamboo)')}
+          </div>
+        </div>
+        <div class="dash-card dash-wide">
+          <span style="display:block; margin-bottom:8px;">Top câu sai nhiều nhất</span>
+          <div class="wrong-list" id="topWrongList"></div>
+        </div>
+      </div>`;
+    const topWrong = topWrongQuestions(5);
+    const list = document.getElementById('topWrongList');
+    if (topWrong.length === 0) {
+      list.innerHTML = `<div class="empty-note">Chưa có câu sai nào — cứ tiếp tục học nhé!</div>`;
+    } else {
+      list.innerHTML = topWrong.map((r, i) => `
+        <div class="wrong-item">
+          <div class="wrong-rank">${i+1}</div>
+          <div class="wrong-q jp">${r.q.question}</div>
+          <div class="wrong-count">Sai ${r.wrongCount} lần</div>
+        </div>`).join('');
+    }
+
+    const all = getAllDatasets();
+    const per = document.getElementById('dashPerDataset');
+    per.innerHTML = '';
+    Object.keys(all).forEach(id => {
+      const ds = all[id];
+      const s = datasetStats(id);
+      const row = document.createElement('div');
+      row.className = 'dataset-card';
+      row.style.marginBottom = '10px';
+      row.onclick = () => this.openDataset(id);
+      row.innerHTML = `
+        <div class="dc-top">
+          <div class="dc-emoji">${ds.emoji || '📘'}</div>
+          <div>
+            <div class="dc-name jp">${ds.name}</div>
+            <div class="dc-meta">${s.progressPct}% hoàn thành · ${s.accuracy.toFixed(0)}% đúng</div>
+          </div>
+        </div>
+        <div class="dc-bar-wrap"><div class="dc-bar" style="width:${s.progressPct}%"></div></div>`;
+      per.appendChild(row);
+    });
+  },
+
+  /* ---------- SETTINGS ---------- */
+  renderSettings() {
+    const theme = document.documentElement.getAttribute('data-theme');
+    document.getElementById('darkSwitch').classList.toggle('on', theme === 'dark');
+
+    // Sync panel
+    const tokenInput = document.getElementById('syncTokenInput');
+    const gistInput = document.getElementById('syncGistIdInput');
+    if (document.activeElement !== tokenInput) tokenInput.value = SYNC.token || '';
+    if (document.activeElement !== gistInput) gistInput.value = SYNC.gistId || '';
+    document.getElementById('disconnectSyncBtn').style.display = (SYNC.token && SYNC.gistId) ? 'block' : 'none';
+    const statusLine = document.getElementById('syncStatusLine');
+    if (!SYNC.token || !SYNC.gistId) {
+      statusLine.textContent = '⚪ Chưa kết nối — đang chỉ lưu trên máy này.';
+      statusLine.style.color = 'var(--ink-soft)';
+    } else if (SYNC.status === 'syncing') {
+      statusLine.textContent = '🔄 Đang đồng bộ...';
+      statusLine.style.color = 'var(--ink-soft)';
+    } else if (SYNC.status === 'error') {
+      statusLine.textContent = `🔴 Lỗi đồng bộ: ${SYNC.lastError || 'không rõ nguyên nhân'}`;
+      statusLine.style.color = 'var(--vermilion-deep)';
+    } else {
+      const t = SYNC.lastSyncedAt ? new Date(SYNC.lastSyncedAt).toLocaleTimeString('vi-VN') : '—';
+      statusLine.textContent = `🟢 Đã kết nối — đồng bộ lần cuối lúc ${t}`;
+      statusLine.style.color = 'var(--bamboo-deep)';
+    }
+
+    const all = getAllDatasets();
+    const zone = document.getElementById('dangerZone');
+    zone.innerHTML = '';
+    Object.keys(all).forEach(id => {
+      const ds = all[id];
+      const isCustom = !!CACHE.customDatasets[id];
+      const row = document.createElement('div');
+      row.className = 'settings-row';
+      row.innerHTML = `
+        <div><div class="label">Reset "${ds.name}"</div><div class="desc">Xoá lịch sử học của riêng bộ này</div></div>
+        <button class="btn btn-danger btn-sm">Reset</button>`;
+      row.querySelector('button').onclick = () => this.confirmReset(id, ds.name);
+      zone.appendChild(row);
+
+      if (isCustom) {
+        const delRow = document.createElement('div');
+        delRow.className = 'settings-row';
+        delRow.innerHTML = `
+          <div><div class="label">Xoá hẳn "${ds.name}"</div><div class="desc">Xoá toàn bộ câu hỏi + lịch sử của bộ này, không thể hoàn tác</div></div>
+          <button class="btn btn-danger btn-sm">Xoá bộ</button>`;
+        delRow.querySelector('button').onclick = () => this.confirmDeleteDataset(id, ds.name);
+        zone.appendChild(delRow);
+      }
+    });
+    const rowAll = document.createElement('div');
+    rowAll.className = 'settings-row';
+    rowAll.innerHTML = `
+      <div><div class="label">Xoá toàn bộ lịch sử học</div><div class="desc">Xoá tiến độ của tất cả bộ dữ liệu</div></div>
+      <button class="btn btn-danger btn-sm">Xoá hết</button>`;
+    rowAll.querySelector('button').onclick = () => this.confirmReset('all', 'tất cả bộ dữ liệu');
+    zone.appendChild(rowAll);
+  },
+
+  async handleConnectGist() {
+    const token = document.getElementById('syncTokenInput').value.trim();
+    const gistId = document.getElementById('syncGistIdInput').value.trim();
+    if (!token) { this.toast('Cần nhập GitHub token trước.'); return; }
+    this.toast('Đang kết nối...');
+    const ok = await connectGist(token, gistId);
+    this.renderSettings();
+    if (ok) {
+      document.getElementById('syncGistIdInput').value = SYNC.gistId;
+      this.toast('Kết nối thành công! Gist ID: ' + SYNC.gistId);
+    } else {
+      this.toast('Kết nối thất bại — kiểm tra lại token/Gist ID.');
+    }
+  },
+
+  async handleManualSync() {
+    if (!SYNC.token || !SYNC.gistId) { this.toast('Chưa kết nối GitHub Gist.'); return; }
+    this.toast('Đang đồng bộ...');
+    await syncOnStartup();
+    this.renderSettings();
+  },
+
+  handleDisconnectGist() {
+    this.showSheet(
+      'Ngắt kết nối đồng bộ?',
+      'Dữ liệu trên máy này vẫn được giữ nguyên, chỉ ngừng tự động đồng bộ lên Gist.',
+      [
+        { text: 'Huỷ', cls: 'btn-ghost', action: () => this.hideSheet() },
+        { text: 'Ngắt kết nối', cls: 'btn-danger', action: () => {
+            disconnectGist();
+            document.getElementById('syncTokenInput').value = '';
+            document.getElementById('syncGistIdInput').value = '';
+            this.renderSettings();
+            this.hideSheet();
+            this.toast('Đã ngắt kết nối đồng bộ.');
+          } },
+      ]
+    );
+  },
+
+  confirmReset(target, label) {
+    this.showSheet(
+      `Xoá lịch sử: ${label}?`,
+      `Hành động này sẽ xoá vĩnh viễn số liệu đúng/sai và mức độ ghi nhớ đã lưu. Không thể hoàn tác.`,
+      [
+        { text: 'Huỷ', cls: 'btn-ghost', action: () => this.hideSheet() },
+        { text: 'Xoá', cls: 'btn-danger', action: () => { this.doReset(target); this.hideSheet(); } },
+      ]
+    );
+  },
+
+  doReset(target) {
+    if (target === 'all') {
+      CACHE.progress = {};
+      this.toast('Đã xoá toàn bộ lịch sử học.');
+    } else {
+      delete CACHE.progress[target];
+      this.toast('Đã reset bộ dữ liệu.');
+    }
+    persistLocal();
+    this.renderSettings();
+    this.renderHome();
+  },
+
+  confirmDeleteDataset(dsId, dsName) {
+    const sheet = document.getElementById('sheetContent');
+    sheet.classList.remove('fb-ok', 'fb-no');
+    sheet.innerHTML = `
+      <h3>Xoá hẳn bộ "${dsName}"?</h3>
+      <p>Toàn bộ câu hỏi và lịch sử học của bộ này sẽ bị xoá vĩnh viễn, không thể hoàn tác. Gõ đúng <b>delete</b> vào ô bên dưới để xác nhận.</p>
+      <input type="text" id="deleteConfirmInput" placeholder="Gõ: delete" autocomplete="off"
+        style="width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--paper-dim); color:var(--ink); font-size:14px; margin-bottom:14px;">
+      <div class="row">
+        <button class="btn btn-ghost" id="deleteCancelBtn">Huỷ</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn" disabled>Xoá vĩnh viễn</button>
+      </div>`;
+    document.getElementById('overlay').classList.add('show');
+
+    const input = document.getElementById('deleteConfirmInput');
+    const btn = document.getElementById('confirmDeleteBtn');
+    input.addEventListener('input', () => {
+      btn.disabled = input.value.trim().toLowerCase() !== 'delete';
+    });
+    document.getElementById('deleteCancelBtn').onclick = () => this.hideSheet();
+    btn.onclick = () => {
+      if (input.value.trim().toLowerCase() !== 'delete') return;
+      this.doDeleteDataset(dsId, dsName);
+      this.hideSheet();
+    };
+    setTimeout(() => input.focus(), 60);
+  },
+
+  doDeleteDataset(dsId, dsName) {
+    delete CACHE.customDatasets[dsId];
+    delete CACHE.progress[dsId];
+    persistLocal();
+    this.toast(`Đã xoá bộ "${dsName}".`);
+    this.renderSettings();
+    this.renderHome();
+  },
+
+  /* ---------- EXPORT / IMPORT PROGRESS ---------- */
+  exportProgress(target) {
+    const all = getAllDatasets();
+    const payload = { exportedAt: new Date().toISOString(), datasets: {} };
+    const ids = target === 'all' ? Object.keys(all) : [target];
+    ids.forEach(id => { payload.datasets[id] = { name: all[id].name, progress: getProgress(id) }; });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `mondo_progress_${todayStr()}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.toast('Đã tải file sao lưu tiến độ.');
+  },
+
+  handleImportProgress(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.datasets) throw new Error('invalid format');
+        Object.keys(data.datasets).forEach(id => {
+          saveProgress(id, data.datasets[id].progress || {});
+        });
+        this.toast('Đã khôi phục tiến độ thành công.');
+        this.renderHome();
+      } catch (err) {
+        this.toast('File sao lưu không hợp lệ.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  },
+
+  /* ---------- IMPORT NEW DATASET ---------- */
+  triggerFileImport(kind) {
+    const nameInput = document.getElementById('importDatasetName');
+    const name = nameInput.value.trim();
+    if (!name) {
+      this.toast('Vui lòng nhập tên bộ dữ liệu trước khi chọn file.');
+      nameInput.focus();
+      return;
+    }
+    document.getElementById(kind === 'json' ? 'importJsonFile' : 'importCsvFile').click();
+  },
+
+  handleImportFile(e, kind) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const dsName = document.getElementById('importDatasetName').value.trim();
+    if (!dsName) {
+      // Shouldn't normally happen (triggerFileImport gates this), but guard anyway.
+      this.toast('Vui lòng nhập tên bộ dữ liệu trước khi chọn file.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        let questions;
+        if (kind === 'json') {
+          const data = JSON.parse(ev.target.result);
+          if (Array.isArray(data)) {
+            questions = normalizeQuestions(data);
+          } else if (data.questions) {
+            questions = normalizeQuestions(data.questions);
+          } else {
+            throw new Error('invalid');
+          }
+        } else {
+          questions = parseCSV(ev.target.result).questions;
+        }
+        if (!questions.length) throw new Error('empty');
+
+        // Merge into an existing dataset with the same name (case-insensitive),
+        // otherwise create a new one. Built-in datasets can't be extended in
+        // place, so a name collision with one of those is rejected instead.
+        const norm = s => s.trim().toLowerCase();
+        const builtinMatch = Object.values(BUILTIN_DATASETS).some(ds => norm(ds.name) === norm(dsName));
+        if (builtinMatch) {
+          this.toast(`"${dsName}" trùng tên bộ có sẵn — vui lòng đặt tên khác.`);
+          e.target.value = '';
+          return;
+        }
+
+        const existingId = Object.keys(CACHE.customDatasets)
+          .find(id => norm(CACHE.customDatasets[id].name) === norm(dsName));
+
+        if (existingId) {
+          const existingDs = CACHE.customDatasets[existingId];
+          const existingTexts = new Set(existingDs.questions.map(q => (q.question || '').trim()));
+          const uniqueNew = questions.filter(q => !existingTexts.has((q.question || '').trim()));
+          const skipped = questions.length - uniqueNew.length;
+          existingDs.questions = existingDs.questions.concat(uniqueNew);
+          persistLocal();
+          this.toast(`Đã gộp ${uniqueNew.length} câu mới vào bộ "${existingDs.name}"` + (skipped ? ` (bỏ qua ${skipped} câu trùng).` : '.'));
+        } else {
+          const id = 'custom_' + Date.now();
+          CACHE.customDatasets[id] = { name: dsName, emoji: '📚', questions };
+          persistLocal();
+          this.toast(`Đã thêm bộ "${dsName}" với ${questions.length} câu.`);
+        }
+
+        document.getElementById('importDatasetName').value = '';
+        this.navigate('home');
+      } catch (err) {
+        this.toast('Không đọc được file. Kiểm tra lại định dạng.');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  },
+
+  /* ---------- UI helpers ---------- */
+  toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  },
+
+  showSheet(title, desc, buttons) {
+    const sheet = document.getElementById('sheetContent');
+    sheet.innerHTML = `<h3>${title}</h3><p>${desc}</p><div class="row" id="sheetBtns"></div>`;
+    const row = document.getElementById('sheetBtns');
+    buttons.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'btn ' + b.cls;
+      btn.textContent = b.text;
+      btn.onclick = b.action;
+      row.appendChild(btn);
+    });
+    document.getElementById('overlay').classList.add('show');
+  },
+  hideSheet() { document.getElementById('overlay').classList.remove('show'); },
+};
+
+function statusRow(label, count, total, color) {
+  const pct = total ? Math.round(count/total*100) : 0;
+  return `<div class="status-row">
+    <span class="status-dot" style="background:${color}"></span>
+    <span style="width:104px; flex:none;">${label}</span>
+    <div class="track"><div class="fill" style="width:${pct}%; background:${color};"></div></div>
+    <span class="num">${count}</span>
+  </div>`;
+}
+
+/* ---------- Normalization / import parsing ---------- */
+function normalizeQuestions(arr) {
+  return arr.map((item, i) => {
+    let answer = item.answer;
+    if (typeof answer === 'string') {
+      const map = { A:0, B:1, C:2, D:3, a:0, b:1, c:2, d:3 };
+      answer = map[answer.trim()] !== undefined ? map[answer.trim()] : parseInt(answer, 10) || 0;
+    }
+    return {
+      id: item.id !== undefined ? item.id : (Date.now() + i),
+      question: item.question || item.q || '',
+      options: item.options || [item.option_a, item.option_b, item.option_c, item.option_d].filter(x => x !== undefined),
+      answer: answer || 0,
+      explanation: item.explanation || item.explain || ''
+    };
+  }).filter(q => q.question && q.options.length >= 2 && q.options.length <= 4);
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '', inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQuotes && line[i+1] === '"') { cur += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (c === ',' && !inQuotes) {
+      result.push(cur); cur = '';
+    } else cur += c;
+  }
+  result.push(cur);
+  return result.map(s => s.trim());
+}
+
+/* Entry point: sniffs which CSV flavor we're looking at and dispatches
+   to the right parser. Returns { name: string|null, questions: [...] }. */
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (!lines.length) return { name: null, questions: [] };
+  const firstType = (parseCSVLine(lines[0])[0] || '').trim().toLowerCase();
+  if (firstType === 'title' || firstType === 'selection problem' || firstType === 'explanation') {
+    return parseShinNihongoCSV(lines);
+  }
+  return { name: null, questions: parseGenericCSV(lines) };
+}
+
+/* ---- Format A: generic header-based CSV -----------------------------
+   question, option_a, option_b, option_c, option_d, answer, explanation
+------------------------------------------------------------------------ */
+function parseGenericCSV(lines) {
+  if (lines.length < 2) return [];
+  const header = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+  const idx = {
+    id: header.indexOf('id'),
+    question: header.indexOf('question'),
+    a: header.indexOf('option_a'), b: header.indexOf('option_b'),
+    c: header.indexOf('option_c'), d: header.indexOf('option_d'),
+    answer: header.indexOf('answer'),
+    explanation: header.indexOf('explanation'),
+  };
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < 2) continue;
+    const rawAnswer = idx.answer >= 0 ? cols[idx.answer] : '0';
+    const map = { A:0, B:1, C:2, D:3, a:0, b:1, c:2, d:3 };
+    const answer = map[rawAnswer.trim()] !== undefined ? map[rawAnswer.trim()] : (parseInt(rawAnswer, 10) || 0);
+    rows.push({
+      id: idx.id >= 0 && cols[idx.id] ? cols[idx.id] : (Date.now() + i),
+      question: idx.question >= 0 ? cols[idx.question] : '',
+      options: [cols[idx.a], cols[idx.b], cols[idx.c], cols[idx.d]],
+      answer,
+      explanation: idx.explanation >= 0 ? cols[idx.explanation] : ''
+    });
+  }
+  return rows.filter(q => q.question && q.options.every(o => o !== undefined && o !== ''));
+}
+
+/* ---- Format B: "Shin Nihongo 500"-style CSV --------------------------
+   No header row. Rows come in a repeating pattern:
+     title,<dataset name>,,,,,
+     selection problem,<question with a ________ blank>,<opt1>,<opt2>,<opt3>,<opt4>,
+     explanation,<explanation text>,,,,,
+   Convention in this source material: the FIRST option listed is always
+   the correct answer (the explanation elaborates on it) — the app must
+   shuffle the options on import so the correct one isn't always slot A.
+------------------------------------------------------------------------ */
+function parseShinNihongoCSV(lines) {
+  let datasetName = null;
+  const questions = [];
+  let current = null;
+  let counter = 0;
+
+  function finalize(q) {
+    const correctText = q.options[0];
+    const shuffled = q.options.slice().sort(() => Math.random() - 0.5);
+    let answer = shuffled.indexOf(correctText);
+    if (answer < 0) answer = 0; // safety net, shouldn't happen
+    return { id: q.id, question: q.question, options: shuffled, answer, explanation: q.explanation };
+  }
+
+  lines.forEach(line => {
+    const cols = parseCSVLine(line);
+    const type = (cols[0] || '').trim().toLowerCase();
+    if (type === 'title') {
+      const t = (cols[1] || '').trim();
+      if (t) datasetName = t;
+    } else if (type === 'selection problem') {
+      if (current) questions.push(finalize(current));
+      counter++;
+      const options = [cols[2], cols[3], cols[4], cols[5]].map(o => (o || '').trim()).filter(o => o.length);
+      current = {
+        id: 'sn_' + Date.now() + '_' + counter,
+        question: (cols[1] || '').trim(),
+        options,
+        explanation: ''
+      };
+    } else if (type === 'explanation') {
+      if (current) current.explanation = (cols[1] || '').trim();
+    }
+  });
+  if (current) questions.push(finalize(current));
+
+  return { name: datasetName, questions: questions.filter(q => q.question && q.options.length >= 2 && q.options.length <= 4) };
+}
+
+/* ---------- Boot ---------- */
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
+}
+</script>
+</body>
+</html>
