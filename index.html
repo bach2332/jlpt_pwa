@@ -333,16 +333,6 @@ input[type=file]{ display:none; }
   .app{ box-shadow:0 0 60px rgba(0,0,0,.06); }
 }
 </style>
-
-<!-- PWA -->
-<meta name="theme-color" content="#c1440e">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Mondō">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
 <div class="app" id="app">
@@ -385,6 +375,7 @@ input[type=file]{ display:none; }
       <div class="count-picker" id="countPicker"></div>
       <button class="btn btn-primary" onclick="App.confirmStartExam()">Bắt đầu thi thử →</button>
     </div>
+    <div id="levelConfig" style="display:none; flex-direction:column; gap:10px;"></div>
     <div class="section-title">Thống kê bộ này</div>
     <div id="modesDash"></div>
   </div>
@@ -584,7 +575,8 @@ const LS_SYNC_KEY = 'mondo_sync_cfg_v1';
 const GIST_FILENAME = 'mondo_progress.json';
 
 const CACHE = { progress: {}, customDatasets: {}, theme: 'light', dailyLog: {}, updatedAt: 0, ready: false };
-const SYNC = { token: '', gistId: '', lastSyncedAt: 0, status: 'idle', lastError: '' }; // status: idle|syncing|ok|error
+const SYNC = { token: '', gistId: '', lastSyncedAt: 0, lastSyncedUpdatedAt: 0, status: 'idle', lastError: '' }; // status: idle|syncing|ok|error|conflict
+let PENDING_CONFLICT_REMOTE = null; // holds the remote snapshot while a conflict is awaiting the user's choice
 
 let _pushDebounce = null;
 
@@ -621,7 +613,7 @@ function persistSyncCfg() {
 function scheduleCloudPush() {
   if (!SYNC.token || !SYNC.gistId) return;
   clearTimeout(_pushDebounce);
-  _pushDebounce = setTimeout(() => pushToGist(), 3000);
+  _pushDebounce = setTimeout(() => reconcileSync(), 3000);
 }
 
 function setSyncStatus(status, err) {
@@ -690,59 +682,108 @@ async function createGist() {
   return gist.id;
 }
 
-async function syncOnStartup() {
+function applyRemoteToLocal(remote) {
+  CACHE.progress = remote.progress || {};
+  CACHE.customDatasets = remote.customDatasets || {};
+  CACHE.theme = remote.theme || CACHE.theme;
+  CACHE.dailyLog = remote.dailyLog || {};
+  CACHE.updatedAt = remote.updatedAt || CACHE.updatedAt;
+  try { localStorage.setItem(LS_DATA_KEY, JSON.stringify(snapshotData())); } catch (e) { /* ignore */ }
+}
+
+/* Anki/AnkiDroid-style reconciliation: we don't merge individual answers —
+   whichever side "wins" fully overwrites the other. What we DO copy from
+   Anki is conflict *detection*: each device remembers the updatedAt value
+   it was last successfully in sync with (SYNC.lastSyncedUpdatedAt). On the
+   next sync we compare both local and remote against that baseline:
+     - only remote moved forward  -> safe to auto-download
+     - only local moved forward   -> safe to auto-upload
+     - both moved forward         -> CONFLICT: stop and ask the user which
+       side to keep, exactly like AnkiDroid's "conflict, upload or download?"
+       prompt, instead of silently picking one. */
+async function reconcileSync() {
   if (!SYNC.token || !SYNC.gistId) return;
   setSyncStatus('syncing');
-  const remote = await pullFromGist();
-  if (remote && (remote.updatedAt || 0) > (CACHE.updatedAt || 0)) {
-    CACHE.progress = remote.progress || {};
-    CACHE.customDatasets = remote.customDatasets || {};
-    CACHE.theme = remote.theme || CACHE.theme;
-    CACHE.dailyLog = remote.dailyLog || {};
-    CACHE.updatedAt = remote.updatedAt;
-    try { localStorage.setItem(LS_DATA_KEY, JSON.stringify(snapshotData())); } catch (e) { /* ignore */ }
+  let remote;
+  try {
+    remote = await pullFromGist();
+  } catch (e) {
+    setSyncStatus('error', e.message);
+    return;
+  }
+
+  if (!remote) {
+    // Nothing readable on the Gist side yet — seed it with what we have.
+    await pushToGist();
+    SYNC.lastSyncedUpdatedAt = CACHE.updatedAt;
+    persistSyncCfg();
+    return;
+  }
+
+  const baseline = SYNC.lastSyncedUpdatedAt || 0;
+  const remoteChanged = (remote.updatedAt || 0) > baseline;
+  const localChanged = (CACHE.updatedAt || 0) > baseline;
+
+  if (!remoteChanged && !localChanged) {
+    setSyncStatus('ok'); // already in sync, nothing to do
+    return;
+  }
+
+  if (remoteChanged && !localChanged) {
+    applyRemoteToLocal(remote);
+    SYNC.lastSyncedUpdatedAt = remote.updatedAt;
+    persistSyncCfg();
+    setSyncStatus('ok');
     if (typeof App !== 'undefined') {
-      App.toast('Đã tải tiến độ mới nhất từ cloud.');
+      App.toast('Đã tải tiến độ mới từ cloud.');
       App.applyTheme();
       App.renderHome();
     }
+    return;
   }
-  setSyncStatus(remote ? 'ok' : 'error', remote ? '' : 'Không đọc được dữ liệu từ Gist.');
+
+  if (!remoteChanged && localChanged) {
+    await pushToGist();
+    SYNC.lastSyncedUpdatedAt = CACHE.updatedAt;
+    persistSyncCfg();
+    return;
+  }
+
+  // Both sides changed since the last known-good sync point — conflict.
+  PENDING_CONFLICT_REMOTE = remote;
+  setSyncStatus('conflict');
+  if (typeof App !== 'undefined') App.showSyncConflict(remote);
 }
 
 async function connectGist(token, gistId) {
   SYNC.token = token.trim();
   SYNC.gistId = gistId.trim();
   persistSyncCfg();
-  setSyncStatus('syncing');
   try {
     if (!SYNC.gistId) {
+      setSyncStatus('syncing');
       SYNC.gistId = await createGist();
+      SYNC.lastSyncedUpdatedAt = CACHE.updatedAt;
       persistSyncCfg();
-    } else {
-      const remote = await pullFromGist();
-      if (remote && (remote.updatedAt || 0) > (CACHE.updatedAt || 0)) {
-        CACHE.progress = remote.progress || {};
-        CACHE.customDatasets = remote.customDatasets || {};
-        CACHE.theme = remote.theme || CACHE.theme;
-        CACHE.dailyLog = remote.dailyLog || {};
-        CACHE.updatedAt = remote.updatedAt;
-        try { localStorage.setItem(LS_DATA_KEY, JSON.stringify(snapshotData())); } catch (e) { /* ignore */ }
-      } else {
-        await pushToGist();
-      }
+      setSyncStatus('ok');
+      return { ok: true, conflict: false };
     }
-    setSyncStatus('ok');
-    return true;
+    // Reconnecting to an existing Gist — run it through the same conflict
+    // check as any other sync. If both this device and the Gist already
+    // hold real progress, that's exactly the "which copy do I keep?"
+    // situation AnkiDroid asks about on a device's first sync too.
+    await reconcileSync();
+    return { ok: SYNC.status !== 'error', conflict: SYNC.status === 'conflict' };
   } catch (e) {
     console.error('Connect gist failed', e);
     setSyncStatus('error', e.message);
-    return false;
+    return { ok: false, conflict: false };
   }
 }
 
 function disconnectGist() {
-  SYNC.token = ''; SYNC.gistId = ''; SYNC.status = 'idle'; SYNC.lastError = '';
+  SYNC.token = ''; SYNC.gistId = ''; SYNC.status = 'idle'; SYNC.lastError = ''; SYNC.lastSyncedUpdatedAt = 0;
+  PENDING_CONFLICT_REMOTE = null;
   persistSyncCfg();
 }
 
@@ -844,7 +885,7 @@ function weightedPick(pool, weightFn, excludeIds) {
   return usable[usable.length - 1];
 }
 
-function buildPoolForMode(dsId, mode) {
+function buildPoolForMode(dsId, mode, level) {
   const ds = getDataset(dsId);
   const prog = getProgress(dsId);
   const all = ds.questions;
@@ -857,8 +898,31 @@ function buildPoolForMode(dsId, mode) {
   if (mode === 'exam') {
     return all.slice();
   }
+  if (mode === 'level') {
+    return buildPoolForLevel(dsId, level);
+  }
   // smart review (default): everything, weighting handles priority
   return all.slice();
+}
+
+const LEVELS = [
+  { key: 'new', label: 'Chưa trả lời', icon: '⚪', bg: '#e9e5d8', color: 'var(--ink-soft)' },
+  { key: 'struggling', label: 'Not good', icon: '🔴', bg: '#f7e2d8', color: 'var(--vermilion-deep)' },
+  { key: 'needs_review', label: 'So so', icon: '🟠', bg: '#f3e6cf', color: '#8a5c1f' },
+  { key: 'learning', label: 'Good', icon: '🟡', bg: '#f3e0b8', color: '#7a5a13' },
+  { key: 'mastered', label: 'Perfect', icon: '🏆', bg: '#e4f1e9', color: 'var(--bamboo-deep)' },
+];
+
+function buildPoolForLevel(dsId, level) {
+  const ds = getDataset(dsId);
+  const prog = getProgress(dsId);
+  return ds.questions.filter(q => {
+    const p = prog[q.id];
+    if (level === 'new') return !p || p.totalAttempts === 0;
+    if (!p || p.totalAttempts === 0) return false;
+    const st = p.status || computeStatus(p);
+    return st === level;
+  });
 }
 
 /* ---------- 4. Dataset stats ------------------------------------------ */
@@ -949,7 +1013,7 @@ const App = {
     this.renderHome();
 
     if (SYNC.token && SYNC.gistId) {
-      syncOnStartup().catch(e => console.error('Background sync failed', e));
+      reconcileSync().catch(e => console.error('Background sync failed', e));
     }
   },
 
@@ -1034,6 +1098,7 @@ const App = {
       { key: 'wrong', icon: '🎯', bg: '#f7e2d8', color: '#9c3509', title: 'Ôn câu sai', desc: 'Chỉ luyện lại những câu bạn từng trả lời sai.', count: wrongPool },
       { key: 'smart', icon: '✨', bg: '#f3e0b8', color: '#7a5a13', title: 'Smart Review', desc: 'Kết hợp thông minh: câu mới, câu sai, câu cần ôn.', count: ds.questions.length },
       { key: 'exam', icon: '📝', bg: '#e0e6f1', color: '#28345c', title: 'Thi thử', desc: 'Làm một bài thi thật, chấm điểm cuối bài.', count: ds.questions.length },
+      { key: 'level', icon: '🎚️', bg: '#ece3f3', color: '#5c3a7a', title: 'Theo cấp độ', desc: 'Chọn đúng 1 mức ghi nhớ: Not good / So so / Good / Perfect...', count: ds.questions.length },
     ];
     const grid = document.getElementById('modeGrid');
     grid.innerHTML = '';
@@ -1051,6 +1116,7 @@ const App = {
       grid.appendChild(card);
     });
     document.getElementById('examConfig').style.display = 'none';
+    document.getElementById('levelConfig').style.display = 'none';
 
     document.getElementById('modesDash').innerHTML = `
       <div class="dash-grid">
@@ -1062,6 +1128,9 @@ const App = {
   },
 
   selectMode(mode) {
+    document.getElementById('examConfig').style.display = 'none';
+    document.getElementById('levelConfig').style.display = 'none';
+
     if (mode === 'exam') {
       const total = getDataset(this.state.dsId).questions.length;
       const options = [10, 20, 30, total].filter((v,i,a)=> v>0 && a.indexOf(v)===i && v<=total);
@@ -1078,12 +1147,50 @@ const App = {
       document.getElementById('examConfig').style.display = 'block';
       return;
     }
+
+    if (mode === 'level') {
+      this.showLevelPicker();
+      return;
+    }
+
     const pool = buildPoolForMode(this.state.dsId, mode);
     if (pool.length === 0) {
       this.toast(mode === 'wrong' ? 'Chưa có câu nào sai để ôn 🎉' : 'Không còn câu nào phù hợp trong chế độ này.');
       return;
     }
     this.startQuiz(mode, pool.length);
+  },
+
+  showLevelPicker() {
+    const box = document.getElementById('levelConfig');
+    box.innerHTML = '';
+    LEVELS.forEach(lv => {
+      const count = buildPoolForLevel(this.state.dsId, lv.key).length;
+      const card = document.createElement('div');
+      card.className = 'mode-card';
+      if (count === 0) card.style.opacity = '.5';
+      card.innerHTML = `
+        <div class="mode-icon" style="background:${lv.bg}; color:${lv.color};">${lv.icon}</div>
+        <div>
+          <div class="mode-title">${lv.label}</div>
+          <div class="mode-desc">Chỉ luyện các câu đang ở mức "${lv.label}".</div>
+        </div>
+        <div class="mode-count">${count}<br><span style="font-weight:400;">câu</span></div>`;
+      if (count > 0) card.onclick = () => this.startLevelQuiz(lv.key, lv.label);
+      box.appendChild(card);
+    });
+    box.style.display = 'flex';
+  },
+
+  startLevelQuiz(levelKey, levelLabel) {
+    this.state.selectedLevel = levelKey;
+    this.state.selectedLevelLabel = levelLabel;
+    const pool = buildPoolForMode(this.state.dsId, 'level', levelKey);
+    if (pool.length === 0) {
+      this.toast('Không có câu nào ở mức này.');
+      return;
+    }
+    this.startQuiz('level', pool.length);
   },
 
   confirmStartExam() {
@@ -1099,7 +1206,7 @@ const App = {
       const shuffled = ds.questions.slice().sort(() => Math.random() - 0.5);
       queue = shuffled.slice(0, count);
     } else {
-      queue = { pool: buildPoolForMode(this.state.dsId, mode), remainingCount: count };
+      queue = { pool: buildPoolForMode(this.state.dsId, mode, this.state.selectedLevel), remainingCount: count };
     }
     this.state.quizQueue = queue;
     this.state.quizIndex = 0;
@@ -1113,6 +1220,7 @@ const App = {
   },
 
   modeLabel(mode) {
+    if (mode === 'level') return `Theo cấp độ: ${this.state.selectedLevelLabel}`;
     return { new: 'Học mới', wrong: 'Ôn câu sai', smart: 'Smart Review', exam: 'Thi thử' }[mode] || mode;
   },
 
@@ -1145,6 +1253,17 @@ const App = {
     this.state.excludeRecent.push(q.id);
     if (this.state.excludeRecent.length > 4) this.state.excludeRecent.shift();
 
+    // Randomize the on-screen position of the options every time a question
+    // is shown, so the correct answer's slot (A/B/C/D) is never predictable
+    // from memorizing a fixed position — order maps displayIndex -> original
+    // option index; handleAnswer() and the feedback below use it to map back.
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    this.state.currentOptionOrder = order;
+
     document.getElementById('quizPos').textContent = `問題 ${this.state.quizIndex + 1} / ${posTotal}`;
     document.getElementById('quizProgressFill').style.width = `${((this.state.quizIndex) / posTotal) * 100}%`;
     document.getElementById('chipCombo').textContent = this.state.session.combo;
@@ -1159,20 +1278,23 @@ const App = {
     const optList = document.getElementById('optList');
     optList.innerHTML = '';
     const letters = ['A','B','C','D'];
-    q.options.forEach((opt, i) => {
+    order.forEach((origIdx, displayIdx) => {
       const div = document.createElement('div');
       div.className = 'opt';
-      div.innerHTML = `<span class="letter">${letters[i]}</span><span>${opt}</span>`;
-      div.onclick = () => this.handleAnswer(i);
+      div.innerHTML = `<span class="letter">${letters[displayIdx]}</span><span>${q.options[origIdx]}</span>`;
+      div.onclick = () => this.handleAnswer(displayIdx);
       optList.appendChild(div);
     });
     document.getElementById('feedbackZone').innerHTML = '';
   },
 
-  handleAnswer(selectedIndex) {
+  handleAnswer(displayIndex) {
     if (this.state.answered) return;
     this.state.answered = true;
     const q = this.state.currentQ;
+    const order = this.state.currentOptionOrder;
+    const selectedIndex = order[displayIndex]; // original (unshuffled) option index
+    const correctDisplayIndex = order.indexOf(q.answer);
     const isCorrect = selectedIndex === q.answer;
     const opts = document.querySelectorAll('#optList .opt');
     const letters = ['A','B','C','D'];
@@ -1180,11 +1302,11 @@ const App = {
     if (this.state.mode === 'exam') {
       opts.forEach((o,i) => {
         o.classList.add('locked');
-        if (i === selectedIndex && isCorrect) o.classList.add('selected-correct');
-        else if (i === selectedIndex && !isCorrect) o.classList.add('selected-wrong');
+        if (i === displayIndex && isCorrect) o.classList.add('selected-correct');
+        else if (i === displayIndex && !isCorrect) o.classList.add('selected-wrong');
         else o.classList.add('dim');
       });
-      this.state.examAnswers.push({ q, selectedIndex, isCorrect });
+      this.state.examAnswers.push({ q, selectedIndex, isCorrect, order: order.slice() });
       if (isCorrect) { this.state.session.correct++; this.state.session.combo++; }
       else { this.state.session.wrong++; this.state.session.combo = 0; }
       this.state.session.maxCombo = Math.max(this.state.session.maxCombo, this.state.session.combo);
@@ -1205,11 +1327,11 @@ const App = {
     opts.forEach((o,i) => {
       o.classList.add('locked');
       if (isCorrect) {
-        if (i === selectedIndex) o.classList.add('selected-correct');
+        if (i === displayIndex) o.classList.add('selected-correct');
         else o.classList.add('dim');
       } else {
-        if (i === selectedIndex) o.classList.add('selected-wrong');
-        else if (i === q.answer) o.classList.add('reveal-correct');
+        if (i === displayIndex) o.classList.add('selected-wrong');
+        else if (i === correctDisplayIndex) o.classList.add('reveal-correct');
         else o.classList.add('dim');
       }
     });
@@ -1226,7 +1348,7 @@ const App = {
       fbHtml = `
         <div class="feedback ok" style="margin-bottom:0;">
           <div class="fb-head">🟢 正解！</div>
-          <div class="fb-row"><span class="fb-label">Đáp án đúng</span><b>${letters[q.answer]}. ${q.options[q.answer]}</b></div>
+          <div class="fb-row"><span class="fb-label">Đáp án đúng</span><b>${letters[correctDisplayIndex]}. ${q.options[q.answer]}</b></div>
           <div class="fb-explain jp">${q.explanation}</div>
           <div class="fb-row" style="margin-top:10px;">正解回数: ${updated.correctCount} ／ 不正解回数: ${updated.wrongCount}</div>
         </div>
@@ -1236,8 +1358,8 @@ const App = {
       fbHtml = `
         <div class="feedback no" style="margin-bottom:0;">
           <div class="fb-head">🔴 不正解</div>
-          <div class="fb-row"><span class="fb-label">あなたの回答</span><b>${letters[selectedIndex]}. ${q.options[selectedIndex]}</b></div>
-          <div class="fb-row"><span class="fb-label">正解</span><b>${letters[q.answer]}. ${q.options[q.answer]}</b></div>
+          <div class="fb-row"><span class="fb-label">あなたの回答</span><b>${letters[displayIndex]}. ${q.options[selectedIndex]}</b></div>
+          <div class="fb-row"><span class="fb-label">正解</span><b>${letters[correctDisplayIndex]}. ${q.options[q.answer]}</b></div>
           <div class="fb-explain jp">${q.explanation}</div>
           <div class="fb-row" style="margin-top:10px;">この問題の不正解回数: ${updated.wrongCount}回</div>
           <div class="fb-priority">⚠️ 復習優先度: ${priorityLabel}</div>
@@ -1270,13 +1392,16 @@ const App = {
     zone.innerHTML = '';
     document.getElementById('qText').textContent = '✅ Hoàn thành phiên học!';
     document.getElementById('quizProgressFill').style.width = '100%';
+    const continueAction = this.state.mode === 'level'
+      ? `App.startLevelQuiz('${this.state.selectedLevel}', '${this.state.selectedLevelLabel}')`
+      : `App.selectMode('${this.state.mode}')`;
     document.getElementById('feedbackZone').innerHTML = `
       <div class="feedback ok">
         <div class="fb-head">🎉 Xong phiên học này</div>
         <div class="fb-row">Đúng: ${s.correct} · Sai: ${s.wrong} · Combo cao nhất: ${s.maxCombo}</div>
       </div>
       <div class="next-btn-wrap" style="display:flex; flex-direction:column; gap:10px;">
-        <button class="btn btn-primary" onclick="App.selectMode('${this.state.mode}')">Học thêm một phiên nữa</button>
+        <button class="btn btn-primary" onclick="${continueAction}">Học thêm một phiên nữa</button>
         <button class="btn btn-ghost" onclick="App.goModes()">Quay lại chọn chế độ</button>
       </div>`;
   },
@@ -1301,12 +1426,15 @@ const App = {
     const container = document.getElementById('resultReview');
     container.innerHTML = '<div class="section-title">Xem lại từng câu</div>';
     this.state.examAnswers.forEach((a, i) => {
+      const order = a.order || a.q.options.map((_, idx) => idx);
+      const selectedDisplay = order.indexOf(a.selectedIndex);
+      const correctDisplay = order.indexOf(a.q.answer);
       const div = document.createElement('div');
       div.className = 'review-item';
       div.innerHTML = `
         <div class="review-q jp">${i+1}. ${a.q.question}</div>
-        <div class="review-row ${a.isCorrect ? 'good' : 'bad'}">${a.isCorrect ? '🟢 Đúng' : '🔴 Sai'} — bạn chọn ${letters[a.selectedIndex]}. ${a.q.options[a.selectedIndex]}</div>
-        ${!a.isCorrect ? `<div class="review-row good">Đáp án đúng: ${letters[a.q.answer]}. ${a.q.options[a.q.answer]}</div>` : ''}
+        <div class="review-row ${a.isCorrect ? 'good' : 'bad'}">${a.isCorrect ? '🟢 Đúng' : '🔴 Sai'} — bạn chọn ${letters[selectedDisplay]}. ${a.q.options[a.selectedIndex]}</div>
+        ${!a.isCorrect ? `<div class="review-row good">Đáp án đúng: ${letters[correctDisplay]}. ${a.q.options[a.q.answer]}</div>` : ''}
         <div class="review-row" style="margin-top:4px;">${a.q.explanation}</div>`;
       container.appendChild(div);
     });
@@ -1400,17 +1528,22 @@ const App = {
     document.getElementById('disconnectSyncBtn').style.display = (SYNC.token && SYNC.gistId) ? 'block' : 'none';
     const statusLine = document.getElementById('syncStatusLine');
     if (!SYNC.token || !SYNC.gistId) {
-      statusLine.textContent = '⚪ Chưa kết nối — đang chỉ lưu trên máy này.';
+      statusLine.innerHTML = '⚪ Chưa kết nối — đang chỉ lưu trên máy này.';
       statusLine.style.color = 'var(--ink-soft)';
     } else if (SYNC.status === 'syncing') {
-      statusLine.textContent = '🔄 Đang đồng bộ...';
+      statusLine.innerHTML = '🔄 Đang đồng bộ...';
       statusLine.style.color = 'var(--ink-soft)';
+    } else if (SYNC.status === 'conflict') {
+      statusLine.innerHTML = `⚠️ Có xung đột chưa xử lý — <a href="#" id="reopenConflictLink" style="color:inherit; text-decoration:underline;">bấm để chọn giữ bên nào</a>`;
+      statusLine.style.color = 'var(--vermilion-deep)';
+      const link = document.getElementById('reopenConflictLink');
+      if (link) link.onclick = (e) => { e.preventDefault(); if (PENDING_CONFLICT_REMOTE) this.showSyncConflict(PENDING_CONFLICT_REMOTE); };
     } else if (SYNC.status === 'error') {
-      statusLine.textContent = `🔴 Lỗi đồng bộ: ${SYNC.lastError || 'không rõ nguyên nhân'}`;
+      statusLine.innerHTML = `🔴 Lỗi đồng bộ: ${SYNC.lastError || 'không rõ nguyên nhân'}`;
       statusLine.style.color = 'var(--vermilion-deep)';
     } else {
       const t = SYNC.lastSyncedAt ? new Date(SYNC.lastSyncedAt).toLocaleTimeString('vi-VN') : '—';
-      statusLine.textContent = `🟢 Đã kết nối — đồng bộ lần cuối lúc ${t}`;
+      statusLine.innerHTML = `🟢 Đã kết nối — đồng bộ lần cuối lúc ${t}`;
       statusLine.style.color = 'var(--bamboo-deep)';
     }
 
@@ -1452,9 +1585,10 @@ const App = {
     const gistId = document.getElementById('syncGistIdInput').value.trim();
     if (!token) { this.toast('Cần nhập GitHub token trước.'); return; }
     this.toast('Đang kết nối...');
-    const ok = await connectGist(token, gistId);
+    const result = await connectGist(token, gistId);
     this.renderSettings();
-    if (ok) {
+    if (result.conflict) return; // conflict sheet is already showing — let the user choose there
+    if (result.ok) {
       document.getElementById('syncGistIdInput').value = SYNC.gistId;
       this.toast('Kết nối thành công! Gist ID: ' + SYNC.gistId);
     } else {
@@ -1465,7 +1599,51 @@ const App = {
   async handleManualSync() {
     if (!SYNC.token || !SYNC.gistId) { this.toast('Chưa kết nối GitHub Gist.'); return; }
     this.toast('Đang đồng bộ...');
-    await syncOnStartup();
+    await reconcileSync();
+    this.renderSettings();
+  },
+
+  showSyncConflict(remote) {
+    const localTime = CACHE.updatedAt ? new Date(CACHE.updatedAt).toLocaleString('vi-VN') : 'chưa có dữ liệu';
+    const remoteTime = remote.updatedAt ? new Date(remote.updatedAt).toLocaleString('vi-VN') : 'chưa có dữ liệu';
+    const sheet = document.getElementById('sheetContent');
+    sheet.classList.remove('fb-ok', 'fb-no');
+    sheet.innerHTML = `
+      <h3>⚠️ Xung đột đồng bộ</h3>
+      <p>Cả máy này và cloud đều có thay đổi mới kể từ lần đồng bộ gần nhất. Giống AnkiDroid: bạn cần chọn giữ bên nào — bên còn lại sẽ bị <b>ghi đè hoàn toàn</b>, không thể hoàn tác.</p>
+      <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:16px; line-height:1.8;">
+        📱 Máy này cập nhật lúc: <b style="color:var(--ink);">${localTime}</b><br>
+        ☁️ Cloud cập nhật lúc: <b style="color:var(--ink);">${remoteTime}</b>
+      </div>
+      <div class="row" style="flex-direction:column; gap:10px;">
+        <button class="btn btn-primary" id="conflictUploadBtn">⬆️ Giữ máy này (ghi đè cloud)</button>
+        <button class="btn btn-ghost" id="conflictDownloadBtn">⬇️ Giữ cloud (ghi đè máy này)</button>
+        <button class="btn btn-ghost" id="conflictLaterBtn">Để sau</button>
+      </div>`;
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('conflictUploadBtn').onclick = () => this.resolveSyncConflict('upload', remote);
+    document.getElementById('conflictDownloadBtn').onclick = () => this.resolveSyncConflict('download', remote);
+    document.getElementById('conflictLaterBtn').onclick = () => this.hideSheet();
+  },
+
+  async resolveSyncConflict(choice, remote) {
+    this.hideSheet();
+    if (choice === 'upload') {
+      await pushToGist();
+      SYNC.lastSyncedUpdatedAt = CACHE.updatedAt;
+      persistSyncCfg();
+      PENDING_CONFLICT_REMOTE = null;
+      this.toast('Đã ghi đè cloud bằng dữ liệu máy này.');
+    } else {
+      applyRemoteToLocal(remote);
+      SYNC.lastSyncedUpdatedAt = remote.updatedAt;
+      SYNC.status = 'ok';
+      persistSyncCfg();
+      PENDING_CONFLICT_REMOTE = null;
+      this.applyTheme();
+      this.renderHome();
+      this.toast('Đã ghi đè máy này bằng dữ liệu cloud.');
+    }
     this.renderSettings();
   },
 
@@ -1828,11 +2006,5 @@ function parseShinNihongoCSV(lines) {
 document.addEventListener('DOMContentLoaded', () => App.init());
 </script>
 
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(console.error));
-}
-</script>
 </body>
 </html>
