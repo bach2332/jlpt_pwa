@@ -378,6 +378,15 @@ input[type=file]{ display:none; }
     <div id="levelConfig" style="display:none; flex-direction:column; gap:10px;"></div>
     <div class="section-title">Thống kê bộ này</div>
     <div id="modesDash"></div>
+    <button class="btn btn-ghost" style="margin-top:16px;" onclick="App.navigate('questions')">📋 Xem &amp; sửa danh sách câu hỏi</button>
+  </div>
+
+  <!-- QUESTION LIST / EDITOR -->
+  <div class="screen" id="screen-questions">
+    <div class="section-title" id="questionsTitle">Danh sách câu hỏi</div>
+    <input type="text" id="questionSearchInput" placeholder="🔍 Tìm theo nội dung câu hỏi..."
+      style="width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:14px; margin-bottom:14px;">
+    <div id="questionListContainer"></div>
   </div>
 
   <!-- QUIZ -->
@@ -824,6 +833,28 @@ function computeStatus(p) {
   return "learning";
 }
 
+const LEVEL_RANK = { struggling: 0, needs_review: 1, learning: 2, mastered: 3 };
+
+/* Simulates answering the SAME question correctly N times in a row (using
+   its current wrongCount, which doesn't change on correct answers, so the
+   per-answer memoryScore gain stays constant) to find the smallest N that
+   pushes it to a higher status tier than it's at right now. Used to show
+   "đúng thêm N lần liên tiếp nữa để lên [level]" after each answer. */
+function levelUpInfo(p) {
+  const startStatus = p.status || computeStatus(p);
+  if (startStatus === 'mastered') return null;
+  const startRank = LEVEL_RANK[startStatus] !== undefined ? LEVEL_RANK[startStatus] : -1;
+  const sim = Object.assign({}, p);
+  for (let i = 1; i <= 20; i++) {
+    const gain = Math.max(6, 20 - sim.wrongCount * 2);
+    sim.memoryScore = Math.min(100, sim.memoryScore + gain);
+    sim.consecutiveCorrect += 1;
+    const st = computeStatus(sim);
+    if (LEVEL_RANK[st] > startRank) return { steps: i, nextStatus: st };
+  }
+  return null;
+}
+
 function applyAnswer(dsId, qId, isCorrect) {
   const prog = getProgress(dsId);
   const p = prog[qId] ? Object.assign({}, prog[qId]) : freshProgressEntry();
@@ -1000,6 +1031,7 @@ const App = {
     document.getElementById('importJsonFile').addEventListener('change', (e) => this.handleImportFile(e, 'json'));
     document.getElementById('importCsvFile').addEventListener('change', (e) => this.handleImportFile(e, 'csv'));
     document.getElementById('importProgressFile').addEventListener('change', (e) => this.handleImportProgress(e));
+    document.getElementById('questionSearchInput').addEventListener('input', (e) => this.renderQuestionList(e.target.value));
 
     if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = () => { this.state.voiceReady = true; };
@@ -1040,6 +1072,7 @@ const App = {
     if (screen === 'dashboard') this.renderDashboardScreen();
     if (screen === 'settings') this.renderSettings();
     if (screen === 'home') this.renderHome();
+    if (screen === 'questions') this.renderQuestionList();
   },
 
   goHome() { this.navigate('home'); },
@@ -1344,6 +1377,14 @@ const App = {
     }
 
     let fbHtml;
+    const lvlInfo = levelUpInfo(updated);
+    let levelLine;
+    if (lvlInfo) {
+      const nextLv = LEVELS.find(l => l.key === lvlInfo.nextStatus);
+      levelLine = `<div class="fb-row" style="margin-top:8px; font-weight:700;">📈 Đúng thêm <span style="color:var(--vermilion-deep);">${lvlInfo.steps}</span> lần liên tiếp nữa để lên ${nextLv ? nextLv.icon + ' ' + nextLv.label : lvlInfo.nextStatus}</div>`;
+    } else {
+      levelLine = `<div class="fb-row" style="margin-top:8px; font-weight:700; color:var(--bamboo-deep);">🏆 Câu này đã đạt mức Perfect!</div>`;
+    }
     if (isCorrect) {
       fbHtml = `
         <div class="feedback ok" style="margin-bottom:0;">
@@ -1351,6 +1392,7 @@ const App = {
           <div class="fb-row"><span class="fb-label">Đáp án đúng</span><b>${letters[correctDisplayIndex]}. ${q.options[q.answer]}</b></div>
           <div class="fb-explain jp">${q.explanation}</div>
           <div class="fb-row" style="margin-top:10px;">正解回数: ${updated.correctCount} ／ 不正解回数: ${updated.wrongCount}</div>
+          ${levelLine}
         </div>
         <div class="next-btn-wrap"><button class="btn btn-primary" onclick="App.nextQuestion()">次の問題 →</button></div>`;
     } else {
@@ -1363,6 +1405,7 @@ const App = {
           <div class="fb-explain jp">${q.explanation}</div>
           <div class="fb-row" style="margin-top:10px;">この問題の不正解回数: ${updated.wrongCount}回</div>
           <div class="fb-priority">⚠️ 復習優先度: ${priorityLabel}</div>
+          ${levelLine}
         </div>
         <div class="next-btn-wrap"><button class="btn btn-primary" onclick="App.nextQuestion()">次の問題 →</button></div>`;
     }
@@ -1724,6 +1767,142 @@ const App = {
     this.toast(`Đã xoá bộ "${dsName}".`);
     this.renderSettings();
     this.renderHome();
+  },
+
+  /* ---------- QUESTION LIST / EDITOR ---------- */
+  renderQuestionList(filterText) {
+    const ds = getDataset(this.state.dsId);
+    if (!ds) return;
+    const isCustom = !!CACHE.customDatasets[this.state.dsId];
+    document.getElementById('questionsTitle').textContent = `Danh sách câu hỏi · ${ds.name} (${ds.questions.length} câu)`;
+
+    const q = (filterText !== undefined ? filterText : document.getElementById('questionSearchInput').value).trim().toLowerCase();
+    const list = ds.questions.filter(item => !q || item.question.toLowerCase().includes(q));
+
+    const container = document.getElementById('questionListContainer');
+    container.innerHTML = '';
+
+    if (!isCustom) {
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.style.padding = '14px 4px';
+      note.textContent = '🔒 Đây là bộ mẫu có sẵn — chỉ xem, không sửa/xoá được. Import làm bộ riêng nếu muốn chỉnh sửa.';
+      container.appendChild(note);
+    }
+
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-note';
+      empty.textContent = 'Không tìm thấy câu nào khớp.';
+      container.appendChild(empty);
+      return;
+    }
+
+    const letters = ['A','B','C','D'];
+    list.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'q-card';
+      card.style.marginBottom = '10px';
+      card.style.padding = '16px 16px 14px';
+      const optsHtml = item.options.map((opt, i) => `
+        <div style="font-size:13px; padding:2px 0; ${i === item.answer ? 'color:var(--bamboo-deep); font-weight:700;' : 'color:var(--ink-soft);'}">
+          ${letters[i]}. ${opt}${i === item.answer ? ' ✓' : ''}
+        </div>`).join('');
+      card.innerHTML = `
+        <div class="q-text jp" style="font-size:15px; margin-bottom:10px;">${item.question}</div>
+        <div>${optsHtml}</div>
+        ${item.explanation ? `<div style="font-size:12px; color:var(--ink-soft); margin-top:10px; padding-top:8px; border-top:1px dashed var(--line); line-height:1.6;">${item.explanation}</div>` : ''}
+        <div style="margin-top:12px;">
+          ${isCustom ? `<button class="btn btn-ghost btn-sm">✏️ Sửa</button>` : ''}
+        </div>`;
+      if (isCustom) {
+        card.querySelector('button').onclick = () => this.editQuestion(item.id);
+      }
+      container.appendChild(card);
+    });
+  },
+
+  editQuestion(qId) {
+    const ds = CACHE.customDatasets[this.state.dsId];
+    if (!ds) return;
+    const item = ds.questions.find(x => String(x.id) === String(qId));
+    if (!item) return;
+
+    const sheet = document.getElementById('sheetContent');
+    sheet.classList.remove('fb-ok', 'fb-no');
+    sheet.style.maxHeight = '85vh';
+    sheet.style.overflowY = 'auto';
+
+    const optionRows = item.options.map((opt, i) => `
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <input type="radio" name="editAnswerRadio" value="${i}" id="editAnswerRadio${i}" ${i === item.answer ? 'checked' : ''} style="flex:none; width:18px; height:18px;">
+        <input type="text" id="editOption${i}" value="${(opt || '').replace(/"/g, '&quot;')}"
+          style="flex:1; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:14px;">
+      </div>`).join('');
+
+    sheet.innerHTML = `
+      <h3>Sửa câu hỏi</h3>
+      <p style="margin-bottom:8px;">Chọn nút tròn bên trái đáp án để đổi đáp án đúng.</p>
+      <textarea id="editQuestionText" rows="3"
+        style="width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line); background:var(--paper-dim); color:var(--ink); font-size:14px; margin-bottom:12px; font-family:'Shippori Mincho',serif; resize:vertical;">${item.question}</textarea>
+      ${optionRows}
+      <textarea id="editExplanation" rows="2" placeholder="Giải thích"
+        style="width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line); background:var(--paper-dim); color:var(--ink); font-size:13px; margin:10px 0 16px; resize:vertical;">${item.explanation || ''}</textarea>
+      <div class="row" style="margin-bottom:10px;">
+        <button class="btn btn-ghost" id="editCancelBtn">Huỷ</button>
+        <button class="btn btn-primary" id="editSaveBtn">Lưu</button>
+      </div>
+      <button class="btn btn-danger" id="editDeleteBtn" style="width:100%;">🗑️ Xoá câu này</button>
+    `;
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('editCancelBtn').onclick = () => { sheet.style.maxHeight = ''; this.hideSheet(); };
+    document.getElementById('editSaveBtn').onclick = () => this.saveQuestionEdit(qId);
+    document.getElementById('editDeleteBtn').onclick = () => this.deleteQuestion(qId);
+  },
+
+  saveQuestionEdit(qId) {
+    const ds = CACHE.customDatasets[this.state.dsId];
+    if (!ds) return;
+    const item = ds.questions.find(x => String(x.id) === String(qId));
+    if (!item) return;
+
+    const newQuestion = document.getElementById('editQuestionText').value.trim();
+    const newOptions = item.options.map((_, i) => document.getElementById('editOption' + i).value.trim());
+    const radio = document.querySelector('input[name="editAnswerRadio"]:checked');
+    const newAnswer = radio ? parseInt(radio.value, 10) : item.answer;
+    const newExplanation = document.getElementById('editExplanation').value.trim();
+
+    if (!newQuestion || newOptions.some(o => !o)) {
+      this.toast('Câu hỏi và tất cả đáp án không được để trống.');
+      return;
+    }
+
+    item.question = newQuestion;
+    item.options = newOptions;
+    item.answer = newAnswer;
+    item.explanation = newExplanation;
+    persistLocal();
+
+    document.getElementById('sheetContent').style.maxHeight = '';
+    this.hideSheet();
+    this.toast('Đã lưu thay đổi.');
+    this.renderQuestionList();
+  },
+
+  deleteQuestion(qId) {
+    if (!confirm('Xoá câu hỏi này khỏi bộ dữ liệu? Không thể hoàn tác.')) return;
+    const ds = CACHE.customDatasets[this.state.dsId];
+    if (!ds) return;
+    ds.questions = ds.questions.filter(x => String(x.id) !== String(qId));
+    if (CACHE.progress[this.state.dsId] && CACHE.progress[this.state.dsId][qId]) {
+      delete CACHE.progress[this.state.dsId][qId];
+    }
+    persistLocal();
+
+    document.getElementById('sheetContent').style.maxHeight = '';
+    this.hideSheet();
+    this.toast('Đã xoá câu hỏi.');
+    this.renderQuestionList();
   },
 
   /* ---------- EXPORT / IMPORT PROGRESS ---------- */
