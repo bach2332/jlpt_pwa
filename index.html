@@ -482,7 +482,7 @@ input[type=file]{ display:none; }
       <div style="font-size:13px; line-height:1.8; color:var(--ink-soft);">
         Hỗ trợ <b style="color:var(--ink)">JSON</b> (mảng câu hỏi hoặc <code>{"name":..,"questions":[...]}</code>)
         và <b style="color:var(--ink)">CSV</b> — tự nhận diện 1 trong 2 kiểu:<br>
-        · Có header: <code>question, option_a, option_b, option_c, option_d, answer, explanation</code> (answer là A/B/C/D hoặc 0-3)<br>
+        · Có header (khuyên dùng — mỗi dòng 1 câu): <code>question, option_a, option_b, option_c, option_d, answer, explanation</code> — <code>option_c</code>/<code>option_d</code> để trống nếu câu chỉ có 2-3 lựa chọn; <code>answer</code> ghi chữ A/B/C/D hoặc số 1-4<br>
         · Kiểu "Shin Nihongo 500" (không header, các dòng <code>title / selection problem / explanation</code> — đáp án đúng luôn là lựa chọn đầu tiên, app tự xáo trộn khi import)<br>
         Toàn bộ xử lý diễn ra ngay trên trình duyệt, không cần Internet.
       </div>
@@ -2104,6 +2104,13 @@ function parseCSV(text) {
 /* ---- Format A: generic header-based CSV -----------------------------
    question, option_a, option_b, option_c, option_d, answer, explanation
 ------------------------------------------------------------------------ */
+/* ---- Format A: generic header-based CSV, one row per question --------
+   question, option_a, option_b, option_c, option_d, answer, explanation
+   - option_c / option_d may be left blank for 2- or 3-choice questions.
+   - answer is the letter (A/B/C/D, case-insensitive) of the CORRECT
+     option's ORIGINAL column — not its position after blanks are
+     dropped — or a 1-based number (1=option_a, 2=option_b, ...).
+------------------------------------------------------------------------ */
 function parseGenericCSV(lines) {
   if (lines.length < 2) return [];
   const header = parseCSVLine(lines[0]).map(h => h.toLowerCase());
@@ -2115,22 +2122,50 @@ function parseGenericCSV(lines) {
     answer: header.indexOf('answer'),
     explanation: header.indexOf('explanation'),
   };
+  const letterMap = { A: 0, B: 1, C: 2, D: 3 };
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const cols = parseCSVLine(lines[i]);
     if (cols.length < 2) continue;
-    const rawAnswer = idx.answer >= 0 ? cols[idx.answer] : '0';
-    const map = { A:0, B:1, C:2, D:3, a:0, b:1, c:2, d:3 };
-    const answer = map[rawAnswer.trim()] !== undefined ? map[rawAnswer.trim()] : (parseInt(rawAnswer, 10) || 0);
+
+    // Original 4-slot layout (blanks kept as '' placeholders) so the
+    // answer letter always means "column option_X", regardless of which
+    // slots are actually filled in.
+    const rawOptions = [
+      idx.a >= 0 ? cols[idx.a] : undefined,
+      idx.b >= 0 ? cols[idx.b] : undefined,
+      idx.c >= 0 ? cols[idx.c] : undefined,
+      idx.d >= 0 ? cols[idx.d] : undefined,
+    ].map(o => (o || '').trim());
+
+    const rawAnswer = (idx.answer >= 0 && cols[idx.answer] ? cols[idx.answer] : 'A').trim();
+    let origAnswerIdx;
+    if (letterMap[rawAnswer.toUpperCase()] !== undefined) {
+      origAnswerIdx = letterMap[rawAnswer.toUpperCase()];
+    } else {
+      const n = parseInt(rawAnswer, 10);
+      origAnswerIdx = isNaN(n) ? 0 : n - 1; // 1-based -> 0-based
+    }
+
+    // Drop empty slots (2- or 3-choice questions), remapping the answer
+    // index to wherever the correct option ends up after dropping blanks.
+    const options = [];
+    let answer = 0;
+    rawOptions.forEach((opt, slot) => {
+      if (opt === '') return;
+      if (slot === origAnswerIdx) answer = options.length;
+      options.push(opt);
+    });
+
     rows.push({
       id: idx.id >= 0 && cols[idx.id] ? cols[idx.id] : (Date.now() + i),
-      question: idx.question >= 0 ? cols[idx.question] : '',
-      options: [cols[idx.a], cols[idx.b], cols[idx.c], cols[idx.d]],
+      question: idx.question >= 0 ? (cols[idx.question] || '').trim() : '',
+      options,
       answer,
-      explanation: idx.explanation >= 0 ? cols[idx.explanation] : ''
+      explanation: idx.explanation >= 0 ? (cols[idx.explanation] || '').trim() : ''
     });
   }
-  return rows.filter(q => q.question && q.options.every(o => o !== undefined && o !== ''));
+  return rows.filter(q => q.question && q.options.length >= 2 && q.options.length <= 4);
 }
 
 /* ---- Format B: "Shin Nihongo 500"-style CSV --------------------------
