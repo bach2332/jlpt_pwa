@@ -1,0 +1,17 @@
+{
+  "name": "JLPT挑戦",
+  "short_name": "JLPT挑戦",
+  "description": "Luyện thi JLPT N1 với trắc nghiệm lặp lại ngắt quãng (spaced repetition)",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f1e6",
+  "theme_color": "#c1440e",
+  "lang": "vi",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

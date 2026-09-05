@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>問道 · Mondō — Luyện thi N1</title>
+<title>JLPT挑戦 — Luyện thi N1</title>
+<meta name="theme-color" content="#c1440e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JLPT挑戦">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Serif+JP:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -340,9 +346,9 @@ input[type=file]{ display:none; }
   <div class="topbar">
     <div class="side" id="topbarLeft"></div>
     <div class="brand" onclick="App.goHome()">
-      <div class="seal">問</div>
+      <div class="seal">挑</div>
       <div>
-        <div class="brand-name">Mondō</div>
+        <div class="brand-name">JLPT挑戦</div>
         <div class="brand-sub">JLPT N1 · 反復学習</div>
       </div>
     </div>
@@ -473,6 +479,7 @@ input[type=file]{ display:none; }
     </div>
     <div class="section-title">Vùng nguy hiểm</div>
     <div class="settings-list" id="dangerZone"></div>
+    <div style="text-align:center; margin-top:24px; font-size:11.5px; color:var(--ink-soft);">JLPT挑戦 · phiên bản <span id="appVersionLabel"></span></div>
   </div>
 
   <!-- IMPORT -->
@@ -516,11 +523,18 @@ input[type=file]{ display:none; }
 
 <script>
 /* =====================================================================
-   MONDŌ — Japanese Quiz App with Spaced Repetition
+   JLPT挑戦 — Japanese Quiz App with Spaced Repetition
    Vanilla JS, single file, runs fully offline from localStorage. If
    connected in Settings, it also auto-syncs progress to a private
    GitHub Gist in the background so multiple devices stay in sync.
 ===================================================================== */
+
+/* App version — bump this to today's date (YYYY-MM-DD) every time the
+   app is updated and redeployed. Shown in Settings so the user can
+   confirm which build they're running, and used as the PWA cache-bust
+   key (see service-worker.js) so updates actually take effect instead
+   of being served from a stale cached copy. */
+const APP_VERSION = '2026-09-05';
 
 /* ---------- 1. Sample built-in datasets -----------------------------
    Format spec (as requested):
@@ -683,7 +697,7 @@ async function createGist() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      description: 'Mondō — JLPT quiz progress (auto-managed by the app, safe to leave alone)',
+      description: 'JLPT挑戦 — JLPT quiz progress (auto-managed by the app, safe to leave alone)',
       public: false,
       files: { [GIST_FILENAME]: { content: JSON.stringify(snapshotData()) } },
     }),
@@ -1562,6 +1576,7 @@ const App = {
   renderSettings() {
     const theme = document.documentElement.getAttribute('data-theme');
     document.getElementById('darkSwitch').classList.toggle('on', theme === 'dark');
+    document.getElementById('appVersionLabel').textContent = APP_VERSION;
 
     // Sync panel
     const tokenInput = document.getElementById('syncTokenInput');
@@ -2218,6 +2233,16 @@ function parseShinNihongoCSV(lines) {
 
 /* ---------- Boot ---------- */
 document.addEventListener('DOMContentLoaded', () => App.init());
+
+/* ---------- PWA: register service worker for offline + update handling ----
+   Paired with service-worker.js's network-first navigation strategy and
+   skipWaiting()/clients.claim(), so a fresh deploy is picked up on the very
+   next load instead of being stuck on a stale cached copy. */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch((e) => console.error('SW register failed', e));
+  });
+}
 </script>
 
 </body>
