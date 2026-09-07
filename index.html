@@ -197,6 +197,20 @@ button{font-family:inherit;}
 .chip.wrong{ background:#f4ded4; color:var(--vermilion-deep); }
 [data-theme="dark"] .chip.wrong{ background:#3a1e10; color:#f0a07a; }
 
+.chip.timer-green{ background:#dcece1; color:var(--bamboo-deep); font-variant-numeric:tabular-nums; }
+.chip.timer-yellow{ background:#f3e6cf; color:#8a5c1f; font-variant-numeric:tabular-nums; }
+.chip.timer-red{ background:#f7e2d8; color:var(--vermilion-deep); font-variant-numeric:tabular-nums; animation:timerPulse 1s ease-in-out infinite; }
+[data-theme="dark"] .chip.timer-green{ background:#173322; color:#8fd3ac; }
+[data-theme="dark"] .chip.timer-yellow{ background:#3a2f14; color:#e8c574; }
+[data-theme="dark"] .chip.timer-red{ background:#3a1e10; color:#f0a07a; }
+@keyframes timerPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.5; } }
+
+.timer-bar-track{ height:9px; border-radius:6px; background:var(--paper-dim); overflow:hidden; margin-bottom:16px; }
+.timer-bar-fill{ height:100%; width:100%; border-radius:6px; transition:width 1s linear, background-color .3s ease; }
+.timer-bar-fill.timer-green{ background:var(--bamboo); }
+.timer-bar-fill.timer-yellow{ background:#c98a3f; }
+.timer-bar-fill.timer-red{ background:var(--vermilion); animation:timerPulse 1s ease-in-out infinite; }
+
 .q-card{
   background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
   padding:22px 20px 20px; box-shadow:var(--shadow); margin-bottom:18px; position:relative;
@@ -403,11 +417,13 @@ input[type=file]{ display:none; }
     </div>
     <div class="progress-track"><div class="progress-fill" id="quizProgressFill" style="width:0%"></div></div>
     <div class="stat-chip-row">
+      <div class="chip timer-green" id="quizTimerChip">⏱ <span id="quizTimerText">30s</span></div>
       <div class="chip combo">🔥 <span id="chipCombo">0</span> liên tiếp</div>
       <div class="chip correct">🟢 <span id="chipCorrect">0</span></div>
       <div class="chip wrong">🔴 <span id="chipWrong">0</span></div>
       <div class="chip" id="chipQWrong">Câu này sai: 0 lần</div>
     </div>
+    <div class="timer-bar-track"><div class="timer-bar-fill timer-green" id="timerBarFill"></div></div>
     <div class="q-card">
       <div class="q-label"><span id="qDatasetLabel">N1 語彙</span></div>
       <button class="speak-btn" onclick="App.speak()" title="Nghe phát âm">🔊</button>
@@ -1039,6 +1055,9 @@ const App = {
     excludeRecent: [],
     examAnswers: [],
     voiceReady: false,
+    timerInterval: null,
+    timeLeft: 30,
+    timedOut: false,
   },
 
   init() {
@@ -1079,6 +1098,7 @@ const App = {
   },
 
   navigate(screen) {
+    if (screen !== 'quiz') this.stopQuestionTimer();
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('screen-' + screen).classList.add('active');
     this.state.screen = screen;
@@ -1087,6 +1107,63 @@ const App = {
     if (screen === 'settings') this.renderSettings();
     if (screen === 'home') this.renderHome();
     if (screen === 'questions') this.renderQuestionList();
+  },
+
+  /* ---------- 30s answer timer ----------
+     30s→15s: green, 15s→5s: yellow, 5s→0: red. If time runs out, the
+     question stays on screen as-is (no auto-advance, no auto-lock) —
+     the countdown just stops and turns red. Whatever the user answers
+     after that point is shown for feedback purposes only and does NOT
+     affect score/progress (see handleAnswer's `wasTimedOut` check). */
+  startQuestionTimer() {
+    this.stopQuestionTimer();
+    this.state.timeLeft = 30;
+    this.state.timedOut = false;
+    // Reset the bar to full width instantly (no shrink-then-regrow glitch)
+    // before re-enabling the normal 1s shrink transition for this question.
+    const barFill = document.getElementById('timerBarFill');
+    if (barFill) {
+      barFill.style.transition = 'none';
+      barFill.style.width = '100%';
+      barFill.classList.remove('timer-yellow', 'timer-red');
+      barFill.classList.add('timer-green');
+      void barFill.offsetWidth; // force reflow so the transition:none actually applies
+      barFill.style.transition = '';
+    }
+    this.updateTimerDisplay();
+    this.state.timerInterval = setInterval(() => {
+      this.state.timeLeft--;
+      if (this.state.timeLeft <= 0) {
+        this.state.timeLeft = 0;
+        this.state.timedOut = true;
+        this.stopQuestionTimer();
+      }
+      this.updateTimerDisplay();
+    }, 1000);
+  },
+
+  stopQuestionTimer() {
+    if (this.state.timerInterval) {
+      clearInterval(this.state.timerInterval);
+      this.state.timerInterval = null;
+    }
+  },
+
+  updateTimerDisplay() {
+    const chip = document.getElementById('quizTimerChip');
+    const txt = document.getElementById('quizTimerText');
+    const barFill = document.getElementById('timerBarFill');
+    const colorClass = this.state.timedOut ? 'timer-red' : this.state.timeLeft > 15 ? 'timer-green' : this.state.timeLeft > 5 ? 'timer-yellow' : 'timer-red';
+    if (chip && txt) {
+      txt.textContent = this.state.timedOut ? 'Hết giờ!' : `${this.state.timeLeft}s`;
+      chip.classList.remove('timer-green', 'timer-yellow', 'timer-red');
+      chip.classList.add(colorClass);
+    }
+    if (barFill) {
+      barFill.style.width = `${(this.state.timeLeft / 30) * 100}%`;
+      barFill.classList.remove('timer-green', 'timer-yellow', 'timer-red');
+      barFill.classList.add(colorClass);
+    }
   },
 
   goHome() { this.navigate('home'); },
@@ -1333,11 +1410,14 @@ const App = {
       optList.appendChild(div);
     });
     document.getElementById('feedbackZone').innerHTML = '';
+    this.startQuestionTimer();
   },
 
   handleAnswer(displayIndex) {
     if (this.state.answered) return;
     this.state.answered = true;
+    this.stopQuestionTimer();
+    const wasTimedOut = this.state.timedOut;
     const q = this.state.currentQ;
     const order = this.state.currentOptionOrder;
     const selectedIndex = order[displayIndex]; // original (unshuffled) option index
@@ -1345,6 +1425,7 @@ const App = {
     const isCorrect = selectedIndex === q.answer;
     const opts = document.querySelectorAll('#optList .opt');
     const letters = ['A','B','C','D'];
+    const timeoutBanner = `<div class="fb-row" style="margin-top:8px; font-weight:700; color:var(--vermilion-deep);">⏰ Đã hết 30 giây — câu này không được tính điểm.</div>`;
 
     if (this.state.mode === 'exam') {
       opts.forEach((o,i) => {
@@ -1353,23 +1434,31 @@ const App = {
         else if (i === displayIndex && !isCorrect) o.classList.add('selected-wrong');
         else o.classList.add('dim');
       });
-      this.state.examAnswers.push({ q, selectedIndex, isCorrect, order: order.slice() });
-      if (isCorrect) { this.state.session.correct++; this.state.session.combo++; }
+      // A timed-out answer can never count as correct in the exam tally,
+      // even if it happened to be the right option.
+      const countedCorrect = isCorrect && !wasTimedOut;
+      this.state.examAnswers.push({ q, selectedIndex, isCorrect: countedCorrect, order: order.slice(), timedOut: wasTimedOut });
+      if (countedCorrect) { this.state.session.correct++; this.state.session.combo++; }
       else { this.state.session.wrong++; this.state.session.combo = 0; }
       this.state.session.maxCombo = Math.max(this.state.session.maxCombo, this.state.session.combo);
       document.getElementById('chipCombo').textContent = this.state.session.combo;
       document.getElementById('chipCorrect').textContent = this.state.session.correct;
       document.getElementById('chipWrong').textContent = this.state.session.wrong;
       this.showFeedbackPopup(`
-        <div class="feedback ${isCorrect ? 'ok' : 'no'}" style="margin-bottom:0;">
-          <div class="fb-head">${isCorrect ? '🟢 正解！' : '🔴 不正解'}</div>
-          <div class="fb-row" style="color:var(--ink-soft);">Chế độ thi thử — đáp án đúng sẽ hiện khi xem lại cuối bài.</div>
+        <div class="feedback ${countedCorrect ? 'ok' : 'no'}" style="margin-bottom:0;">
+          <div class="fb-head">${wasTimedOut ? '⏰ Hết giờ' : (countedCorrect ? '🟢 正解！' : '🔴 不正解')}</div>
+          <div class="fb-row" style="color:var(--ink-soft);">Chế độ thi thử — đáp án đúng sẽ hiện khi xem lại cuối bài.${wasTimedOut ? ' Câu này tính là sai vì đã hết giờ.' : ''}</div>
         </div>
         <div class="next-btn-wrap"><button class="btn btn-primary" onclick="App.nextQuestion()">次の問題 →</button></div>`);
       return;
     }
 
-    const updated = applyAnswer(this.state.dsId, q.id, isCorrect);
+    // Normal (non-exam) modes: skip scoring entirely when time ran out —
+    // no memoryScore/wrongCount change, no session combo/correct/wrong
+    // change — this attempt simply doesn't count either way.
+    const updated = wasTimedOut
+      ? (getProgress(this.state.dsId)[q.id] || freshProgressEntry())
+      : applyAnswer(this.state.dsId, q.id, isCorrect);
 
     opts.forEach((o,i) => {
       o.classList.add('locked');
@@ -1383,26 +1472,31 @@ const App = {
       }
     });
 
-    if (isCorrect) {
-      this.state.session.correct++; this.state.session.combo++;
-      this.state.session.maxCombo = Math.max(this.state.session.maxCombo, this.state.session.combo);
-    } else {
-      this.state.session.wrong++; this.state.session.combo = 0;
+    if (!wasTimedOut) {
+      if (isCorrect) {
+        this.state.session.correct++; this.state.session.combo++;
+        this.state.session.maxCombo = Math.max(this.state.session.maxCombo, this.state.session.combo);
+      } else {
+        this.state.session.wrong++; this.state.session.combo = 0;
+      }
     }
 
     let fbHtml;
-    const lvlInfo = levelUpInfo(updated);
-    let levelLine;
-    if (lvlInfo) {
-      const nextLv = LEVELS.find(l => l.key === lvlInfo.nextStatus);
-      levelLine = `<div class="fb-row" style="margin-top:8px; font-weight:700;">📈 Đúng thêm <span style="color:var(--vermilion-deep);">${lvlInfo.steps}</span> lần liên tiếp nữa để lên ${nextLv ? nextLv.icon + ' ' + nextLv.label : lvlInfo.nextStatus}</div>`;
-    } else {
-      levelLine = `<div class="fb-row" style="margin-top:8px; font-weight:700; color:var(--bamboo-deep);">🏆 Câu này đã đạt mức Perfect!</div>`;
+    let levelLine = '';
+    if (!wasTimedOut) {
+      const lvlInfo = levelUpInfo(updated);
+      if (lvlInfo) {
+        const nextLv = LEVELS.find(l => l.key === lvlInfo.nextStatus);
+        levelLine = `<div class="fb-row" style="margin-top:8px; font-weight:700;">📈 Đúng thêm <span style="color:var(--vermilion-deep);">${lvlInfo.steps}</span> lần liên tiếp nữa để lên ${nextLv ? nextLv.icon + ' ' + nextLv.label : lvlInfo.nextStatus}</div>`;
+      } else {
+        levelLine = `<div class="fb-row" style="margin-top:8px; font-weight:700; color:var(--bamboo-deep);">🏆 Câu này đã đạt mức Perfect!</div>`;
+      }
     }
     if (isCorrect) {
       fbHtml = `
         <div class="feedback ok" style="margin-bottom:0;">
           <div class="fb-head">🟢 正解！</div>
+          ${wasTimedOut ? timeoutBanner : ''}
           <div class="fb-row"><span class="fb-label">Đáp án đúng</span><b>${letters[correctDisplayIndex]}. ${q.options[q.answer]}</b></div>
           <div class="fb-explain jp">${q.explanation}</div>
           <div class="fb-row" style="margin-top:10px;">正解回数: ${updated.correctCount} ／ 不正解回数: ${updated.wrongCount}</div>
@@ -1414,6 +1508,7 @@ const App = {
       fbHtml = `
         <div class="feedback no" style="margin-bottom:0;">
           <div class="fb-head">🔴 不正解</div>
+          ${wasTimedOut ? timeoutBanner : ''}
           <div class="fb-row"><span class="fb-label">あなたの回答</span><b>${letters[displayIndex]}. ${q.options[selectedIndex]}</b></div>
           <div class="fb-row"><span class="fb-label">正解</span><b>${letters[correctDisplayIndex]}. ${q.options[q.answer]}</b></div>
           <div class="fb-explain jp">${q.explanation}</div>
@@ -1444,6 +1539,7 @@ const App = {
   },
 
   showSessionComplete() {
+    this.stopQuestionTimer();
     const s = this.state.session;
     const zone = document.getElementById('optList');
     zone.innerHTML = '';
@@ -1490,7 +1586,7 @@ const App = {
       div.className = 'review-item';
       div.innerHTML = `
         <div class="review-q jp">${i+1}. ${a.q.question}</div>
-        <div class="review-row ${a.isCorrect ? 'good' : 'bad'}">${a.isCorrect ? '🟢 Đúng' : '🔴 Sai'} — bạn chọn ${letters[selectedDisplay]}. ${a.q.options[a.selectedIndex]}</div>
+        <div class="review-row ${a.isCorrect ? 'good' : 'bad'}">${a.isCorrect ? '🟢 Đúng' : '🔴 Sai'} — bạn chọn ${letters[selectedDisplay]}. ${a.q.options[a.selectedIndex]}${a.timedOut ? ' ⏰ (hết giờ)' : ''}</div>
         ${!a.isCorrect ? `<div class="review-row good">Đáp án đúng: ${letters[correctDisplay]}. ${a.q.options[a.q.answer]}</div>` : ''}
         <div class="review-row" style="margin-top:4px;">${a.q.explanation}</div>`;
       container.appendChild(div);
