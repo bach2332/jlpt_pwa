@@ -11,7 +11,7 @@
    only falls back to the cached copy when offline. Bumping the version
    just makes sure the OLD cached copy gets cleaned up on activate.
 ------------------------------------------------------------------------- */
-const CACHE_VERSION = 'jlpt-quiz-v2026-09-05';
+const CACHE_VERSION = 'jlpt-quiz-v2026-09-07';
 
 const CORE_ASSETS = [
   './',
