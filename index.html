@@ -500,7 +500,7 @@ input[type=file]{ display:none; }
 
   <!-- IMPORT -->
   <div class="screen" id="screen-import">
-    <div class="section-title">Thêm bộ dữ liệu mới</div>
+    <div class="section-title">Thêm / cập nhật bộ dữ liệu</div>
     <div class="q-card" style="text-align:left;">
       <div style="font-size:13px; line-height:1.8; color:var(--ink-soft);">
         Hỗ trợ <b style="color:var(--ink)">JSON</b> (mảng câu hỏi hoặc <code>{"name":..,"questions":[...]}</code>)
@@ -510,10 +510,17 @@ input[type=file]{ display:none; }
         Toàn bộ xử lý diễn ra ngay trên trình duyệt, không cần Internet.
       </div>
     </div>
-    <input type="text" id="importDatasetName" placeholder="Tên bộ dữ liệu (bắt buộc) — vd: N1 読解" style="width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:14px; margin-bottom:4px;">
-    <div style="font-size:11.5px; color:var(--ink-soft); margin-bottom:12px;">
-      Bắt buộc nhập tên. Nếu trùng tên với bộ đã có (không phân biệt hoa/thường), câu hỏi mới sẽ được <b style="color:var(--ink)">gộp thêm</b> vào bộ đó (câu trùng nội dung sẽ tự bỏ qua) thay vì tạo bộ mới.
+
+    <div class="section-title">Bộ dữ liệu</div>
+    <select id="importDatasetSelect" style="width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:14px; margin-bottom:10px;">
+      <option value="__new__">➕ Thêm bộ mới...</option>
+    </select>
+    <input type="text" id="importDatasetName" placeholder="Tên bộ dữ liệu mới — vd: N1 読解" style="width:100%; padding:13px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:14px; margin-bottom:4px;">
+    <div style="font-size:11.5px; color:var(--ink-soft); margin-bottom:16px;">
+      Chọn một bộ có sẵn ở trên để <b style="color:var(--ink)">gộp thêm</b> câu hỏi mới vào bộ đó (câu trùng nội dung sẽ tự bỏ qua), hoặc để "Thêm bộ mới" và nhập tên để tạo bộ riêng.
     </div>
+
+    <div class="section-title">Cách 1 — Chọn file</div>
     <div class="settings-list">
       <div class="settings-row" onclick="App.triggerFileImport('json')">
         <div><div class="label">📄 Chọn file JSON</div><div class="desc">Import câu hỏi định dạng JSON</div></div>
@@ -524,7 +531,13 @@ input[type=file]{ display:none; }
       </div>
       <input type="file" id="importCsvFile" accept=".csv,text/csv">
     </div>
-    <button class="btn btn-ghost" style="margin-top:16px;" onclick="App.navigate('home')">Huỷ, quay lại trang chủ</button>
+
+    <div class="section-title">Cách 2 — Dán dữ liệu trực tiếp</div>
+    <textarea id="importPasteArea" rows="6" placeholder="Dán nội dung JSON hoặc CSV vào đây... (app tự nhận diện định dạng)"
+      style="width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-size:13px; font-family:monospace; margin-bottom:10px; resize:vertical;"></textarea>
+    <button class="btn btn-primary" onclick="App.handleImportPaste()" style="margin-bottom:16px;">Import từ văn bản đã dán</button>
+
+    <button class="btn btn-ghost" onclick="App.navigate('home')">Huỷ, quay lại trang chủ</button>
   </div>
 
 </div>
@@ -1107,6 +1120,7 @@ const App = {
     if (screen === 'settings') this.renderSettings();
     if (screen === 'home') this.renderHome();
     if (screen === 'questions') this.renderQuestionList();
+    if (screen === 'import') this.renderImportScreen();
   },
 
   /* ---------- 30s answer timer ----------
@@ -2053,82 +2067,135 @@ const App = {
   },
 
   /* ---------- IMPORT NEW DATASET ---------- */
-  triggerFileImport(kind) {
-    const nameInput = document.getElementById('importDatasetName');
-    const name = nameInput.value.trim();
-    if (!name) {
-      this.toast('Vui lòng nhập tên bộ dữ liệu trước khi chọn file.');
-      nameInput.focus();
+  renderImportScreen() {
+    const select = document.getElementById('importDatasetSelect');
+    const current = select.value;
+    select.innerHTML = '<option value="__new__">➕ Thêm bộ mới...</option>';
+    Object.keys(CACHE.customDatasets).forEach(id => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${CACHE.customDatasets[id].name} (${CACHE.customDatasets[id].questions.length} câu)`;
+      select.appendChild(opt);
+    });
+    select.value = Object.prototype.hasOwnProperty.call(CACHE.customDatasets, current) ? current : '__new__';
+    select.onchange = () => this.toggleImportNameInput();
+    this.toggleImportNameInput();
+  },
+
+  toggleImportNameInput() {
+    const isNew = document.getElementById('importDatasetSelect').value === '__new__';
+    document.getElementById('importDatasetName').style.display = isNew ? 'block' : 'none';
+  },
+
+  // Resolves { dsName, existingId } from the current select/name-input state,
+  // or returns null (with a toast already shown) if the input is invalid.
+  resolveImportTarget() {
+    const select = document.getElementById('importDatasetSelect');
+    if (select.value === '__new__') {
+      const nameInput = document.getElementById('importDatasetName');
+      const name = nameInput.value.trim();
+      if (!name) {
+        this.toast('Vui lòng nhập tên bộ dữ liệu mới.');
+        nameInput.focus();
+        return null;
+      }
+      const norm = s => s.trim().toLowerCase();
+      if (Object.values(BUILTIN_DATASETS).some(ds => norm(ds.name) === norm(name))) {
+        this.toast(`"${name}" trùng tên bộ có sẵn — vui lòng đặt tên khác.`);
+        return null;
+      }
+      const existingId = Object.keys(CACHE.customDatasets).find(id => norm(CACHE.customDatasets[id].name) === norm(name));
+      return { dsName: name, existingId: existingId || null };
+    }
+    const ds = CACHE.customDatasets[select.value];
+    if (!ds) { this.toast('Bộ dữ liệu không hợp lệ, thử lại.'); return null; }
+    return { dsName: ds.name, existingId: select.value };
+  },
+
+  commitImportedQuestions(questions, target) {
+    if (!questions || !questions.length) {
+      this.toast('Không đọc được câu hỏi nào — kiểm tra lại định dạng.');
       return;
     }
+    if (target.existingId) {
+      const existingDs = CACHE.customDatasets[target.existingId];
+      const existingTexts = new Set(existingDs.questions.map(q => (q.question || '').trim()));
+      const uniqueNew = questions.filter(q => !existingTexts.has((q.question || '').trim()));
+      const skipped = questions.length - uniqueNew.length;
+      existingDs.questions = existingDs.questions.concat(uniqueNew);
+      persistLocal();
+      this.toast(`Đã gộp ${uniqueNew.length} câu mới vào bộ "${existingDs.name}"` + (skipped ? ` (bỏ qua ${skipped} câu trùng).` : '.'));
+    } else {
+      const id = 'custom_' + Date.now();
+      CACHE.customDatasets[id] = { name: target.dsName, emoji: '📚', questions };
+      persistLocal();
+      this.toast(`Đã thêm bộ "${target.dsName}" với ${questions.length} câu.`);
+    }
+    document.getElementById('importDatasetName').value = '';
+    document.getElementById('importPasteArea').value = '';
+    this.navigate('home');
+  },
+
+  triggerFileImport(kind) {
+    if (!this.resolveImportTarget()) return;
     document.getElementById(kind === 'json' ? 'importJsonFile' : 'importCsvFile').click();
   },
 
   handleImportFile(e, kind) {
     const file = e.target.files[0];
     if (!file) return;
-    const dsName = document.getElementById('importDatasetName').value.trim();
-    if (!dsName) {
-      // Shouldn't normally happen (triggerFileImport gates this), but guard anyway.
-      this.toast('Vui lòng nhập tên bộ dữ liệu trước khi chọn file.');
-      e.target.value = '';
-      return;
-    }
+    const target = this.resolveImportTarget();
+    if (!target) { e.target.value = ''; return; }
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         let questions;
         if (kind === 'json') {
           const data = JSON.parse(ev.target.result);
-          if (Array.isArray(data)) {
-            questions = normalizeQuestions(data);
-          } else if (data.questions) {
-            questions = normalizeQuestions(data.questions);
-          } else {
-            throw new Error('invalid');
-          }
+          if (Array.isArray(data)) questions = normalizeQuestions(data);
+          else if (data.questions) questions = normalizeQuestions(data.questions);
+          else throw new Error('invalid');
         } else {
           questions = parseCSV(ev.target.result).questions;
         }
-        if (!questions.length) throw new Error('empty');
-
-        // Merge into an existing dataset with the same name (case-insensitive),
-        // otherwise create a new one. Built-in datasets can't be extended in
-        // place, so a name collision with one of those is rejected instead.
-        const norm = s => s.trim().toLowerCase();
-        const builtinMatch = Object.values(BUILTIN_DATASETS).some(ds => norm(ds.name) === norm(dsName));
-        if (builtinMatch) {
-          this.toast(`"${dsName}" trùng tên bộ có sẵn — vui lòng đặt tên khác.`);
-          e.target.value = '';
-          return;
-        }
-
-        const existingId = Object.keys(CACHE.customDatasets)
-          .find(id => norm(CACHE.customDatasets[id].name) === norm(dsName));
-
-        if (existingId) {
-          const existingDs = CACHE.customDatasets[existingId];
-          const existingTexts = new Set(existingDs.questions.map(q => (q.question || '').trim()));
-          const uniqueNew = questions.filter(q => !existingTexts.has((q.question || '').trim()));
-          const skipped = questions.length - uniqueNew.length;
-          existingDs.questions = existingDs.questions.concat(uniqueNew);
-          persistLocal();
-          this.toast(`Đã gộp ${uniqueNew.length} câu mới vào bộ "${existingDs.name}"` + (skipped ? ` (bỏ qua ${skipped} câu trùng).` : '.'));
-        } else {
-          const id = 'custom_' + Date.now();
-          CACHE.customDatasets[id] = { name: dsName, emoji: '📚', questions };
-          persistLocal();
-          this.toast(`Đã thêm bộ "${dsName}" với ${questions.length} câu.`);
-        }
-
-        document.getElementById('importDatasetName').value = '';
-        this.navigate('home');
+        this.commitImportedQuestions(questions, target);
       } catch (err) {
         this.toast('Không đọc được file. Kiểm tra lại định dạng.');
       }
     };
     reader.readAsText(file, 'UTF-8');
     e.target.value = '';
+  },
+
+  // Pasted text has no file extension to tell us the format, so we sniff
+  // it: looks like JSON (starts with { or [) -> try JSON.parse; otherwise,
+  // or if that JSON parse fails, fall back to the CSV parser (which itself
+  // auto-detects the header-based vs. "Shin Nihongo" CSV flavors).
+  handleImportPaste() {
+    const target = this.resolveImportTarget();
+    if (!target) return;
+    const raw = document.getElementById('importPasteArea').value;
+    const trimmed = raw.trim();
+    if (!trimmed) { this.toast('Chưa dán nội dung nào.'); return; }
+
+    let questions = null;
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        const data = JSON.parse(trimmed);
+        if (Array.isArray(data)) questions = normalizeQuestions(data);
+        else if (data.questions) questions = normalizeQuestions(data.questions);
+      } catch (e) {
+        questions = null; // not valid JSON after all — fall through to CSV attempt
+      }
+    }
+    if (!questions) {
+      try { questions = parseCSV(trimmed).questions; } catch (e) { questions = null; }
+    }
+    if (!questions || !questions.length) {
+      this.toast('Không nhận diện được định dạng — kiểm tra lại nội dung đã dán.');
+      return;
+    }
+    this.commitImportedQuestions(questions, target);
   },
 
   /* ---------- UI helpers ---------- */
